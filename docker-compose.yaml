@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  hub:
+    build:
+      context: .
+      dockerfile: Dockerfile.hub
+    ports:
+      - "18080:18080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=pingo
+      - DB_USER=pingo
+      - DB_PASSWORD=changeme
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    volumes:
+      - hub-data:/data/files
+
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=pingo
+      - POSTGRES_USER=pingo
+      - POSTGRES_PASSWORD=changeme
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+      - ./migrations/003_admin.sql:/docker-entrypoint-initdb.d/003_admin.sql:ro
+      - ./migrations/004_admin_delete.sql:/docker-entrypoint-initdb.d/004_admin_delete.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pingo -d pingo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  redisdata:
+  hub-data:

@@ -1,0 +1,28 @@
+agents: []
+
+local:
+  api_port: 19191
+  dashboard_port: 19192
+  db_path: "~/.pingo/sidecar.db"
+
+notify:
+  terminal: true
+  desktop: false
+  webhook:
+    enabled: false
+    url: ""
+
+approval:
+  new_direct_chat:
+    from_trusted: "auto_accept"
+    from_normal_friend: "ask_human"
+    default_timeout: "5m"
+    timeout_action: "hold"
+  new_group_invite:
+    from_trusted: "auto_accept"
+    from_normal_friend: "ask_human"
+    default_timeout: "10m"
+    timeout_action: "hold"
+  human_decision:
+    default_timeout: "10m"
+    timeout_action: "reject"

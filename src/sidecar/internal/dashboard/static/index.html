@@ -1,0 +1,1805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pingo Sidecar · 本机控制台</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============ 变量 ============ */
+:root {
+  --bg-void:    #05080f;
+  --bg-deep:    #080c16;
+  --bg-elev:    #0d131f;
+  --bg-card:    rgba(255, 255, 255, 0.018);
+  --bg-card-hi: rgba(74, 222, 128, 0.04);
+  --line-1:      rgba(255, 255, 255, 0.05);
+  --line-2:      rgba(255, 255, 255, 0.09);
+  --line-mint:   rgba(74, 222, 128, 0.30);
+  --line-violet: rgba(167, 139, 250, 0.30);
+  --line-rose:   rgba(251, 113, 133, 0.30);
+  --line-amber:  rgba(251, 191, 36, 0.30);
+  --text-1:    #eef2f7;
+  --text-2:    #c1cad7;
+  --text-3:    #7a869a;
+  --text-faint:#4b566b;
+  --mint:      #4ade80;
+  --mint-soft: #86efac;
+  --mint-glow: rgba(74, 222, 128, 0.45);
+  --violet:    #a78bfa;
+  --amber:     #fbbf24;
+  --rose:      #fb7185;
+  --cyan:      #67e8f9;
+  --display: "Chakra Petch", "PingFang SC", system-ui, sans-serif;
+  --body:    "Manrope", "PingFang SC", system-ui, sans-serif;
+  --mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --shadow-card:  0 1px 0 var(--line-1) inset, 0 20px 40px -24px rgba(0,0,0,.6);
+  --shadow-hover: 0 0 0 1px var(--line-mint) inset, 0 24px 60px -20px rgba(74,222,128,.18);
+}
+html { color-scheme: dark; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg-void); color: var(--text-2);
+  font-family: var(--body); font-size: 14px; line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ============ 背景三件套 ============ */
+body::before {
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,.045) 1px, transparent 0);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, #000 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, #000 30%, transparent 100%);
+}
+body::after {
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(720px 420px at 8% -6%, rgba(74,222,128,.13), transparent 60%),
+    radial-gradient(900px 540px at 110% 110%, rgba(167,139,250,.13), transparent 60%),
+    radial-gradient(600px 360px at 50% 100%, rgba(103,232,249,.06), transparent 65%);
+}
+.scanlines { position:fixed; inset:0; pointer-events:none; z-index:1;
+  background: repeating-linear-gradient(180deg, transparent 0 3px, rgba(255,255,255,.012) 3px 4px); }
+
+/* ============ 顶栏 ============ */
+.topbar {
+  position: sticky; top: 0; z-index: 30;
+  display: grid; grid-template-columns: auto 1fr auto auto;
+  align-items: center; gap: 20px; padding: 14px 32px;
+  background: linear-gradient(180deg, rgba(5,8,15,.88), rgba(5,8,15,.55));
+  backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid var(--line-1);
+}
+.topbar::after {
+  content:""; position:absolute; left:0; right:0; bottom:-1px; height:1px;
+  background: linear-gradient(90deg, transparent, var(--mint), transparent);
+  opacity:.35;
+}
+.brand { display:flex; align-items:center; gap:14px; }
+.brand-mark { position:relative; width:36px; height:36px; }
+.brand-mark .ring { position:absolute; inset:-4px; border:1px dashed var(--line-2);
+  border-radius:50%; animation: spin 18s linear infinite; }
+.brand-mark .core { position:absolute; inset:0; border:1px solid var(--line-2);
+  display:grid; place-items:center; font-family:var(--mono); font-size:11px;
+  font-weight:700; color:var(--mint); }
+.brand-name { font-family:var(--display); font-size:15px; font-weight:700;
+  letter-spacing:.16em; color:var(--text-1); }
+.brand-sub { font-size:10px; font-family:var(--mono); letter-spacing:.2em;
+  color:var(--text-3); text-transform:uppercase; margin-top:2px; }
+
+/* Agent 切换器 */
+.agent-switch {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 14px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-elev);
+  cursor: pointer;
+  transition: .15s ease;
+  min-width: 200px;
+}
+.agent-switch:hover { border-color: var(--line-mint); }
+.agent-switch .as-label { font-family:var(--mono); font-size:10px;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--text-faint); }
+.agent-switch .as-name { font-family:var(--display); font-size:13px;
+  font-weight:600; color:var(--text-1); }
+.agent-switch .as-caret { color:var(--text-faint); margin-left:auto; font-size:10px; }
+.agent-dropdown {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--bg-elev); border: 1px solid var(--line-2);
+  z-index: 60; display: none;
+  box-shadow: 0 20px 40px -12px rgba(0,0,0,.7);
+}
+.agent-dropdown.show { display: block; }
+.agent-dropdown .ad-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; cursor: pointer; transition: .12s ease;
+  border-bottom: 1px solid var(--line-1);
+}
+.agent-dropdown .ad-item:last-child { border-bottom: none; }
+.agent-dropdown .ad-item:hover { background: var(--bg-card-hi); }
+.agent-dropdown .ad-item.active { color: var(--mint); background: var(--bg-card-hi); }
+.agent-dropdown .ad-item .ad-name { font-size: 13px; font-weight: 500; }
+.agent-dropdown .ad-item .ad-id { font-family: var(--mono); font-size: 10px;
+  color: var(--text-faint); margin-left: auto; }
+
+.status-pill {
+  display:inline-flex; align-items:center; gap:7px; padding:4px 10px 3px;
+  border:1px solid var(--line-2); background:rgba(255,255,255,.02);
+  font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--text-3);
+}
+.status-pill.on { color:var(--mint); border-color:var(--line-mint); }
+.status-pill .dot { width:6px; height:6px; border-radius:50%; background:currentColor;
+  box-shadow:0 0 8px currentColor; animation: pulse 1.8s ease-in-out infinite; }
+
+.live-dot { width:7px; height:7px; border-radius:50%; background:var(--mint);
+  box-shadow: 0 0 10px var(--mint-glow); animation: pulse 1.8s ease-in-out infinite; }
+
+/* ============ 主布局 ============ */
+.page {
+  position: relative; z-index: 2;
+  display: grid; grid-template-columns: 240px 1fr;
+  gap: 0; min-height: calc(100vh - 86px - 30px);
+  padding-bottom: 60px;
+}
+
+/* ============ 侧栏 ============ */
+.panel { position: relative; background: var(--bg-card); border: 1px solid var(--line-1);
+  border-top: none; }
+.panel::before { content:""; position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:60%; height:1px;
+  background:linear-gradient(90deg, transparent, var(--line-2), transparent); }
+.panel-head { padding:12px 14px; font-family:var(--mono); font-size:10px; font-weight:600;
+  letter-spacing:.32em; text-transform:uppercase; color:var(--text-3);
+  border-bottom:1px solid var(--line-1);
+  display:flex; justify-content:space-between; align-items:center; }
+.panel-head .tag { color:var(--mint); letter-spacing:.14em; }
+.sidebar { position:sticky; top:86px; align-self:start;
+  border-right: 1px solid var(--line-1); min-height: calc(100vh - 86px - 30px);
+  background: rgba(255,255,255,0.01); }
+.nav-item { display:flex; align-items:center; gap:10px; padding:10px 14px;
+  font-size:13px; color:var(--text-3); cursor:pointer; transition:.15s ease;
+  border-left:2px solid transparent;
+}
+.nav-item .g { width:16px; text-align:center; font-size:13px; }
+.nav-item:hover { color:var(--text-1); background:var(--bg-card-hi); }
+.nav-item.active { color:var(--mint); border-left-color:var(--mint); background:var(--bg-card-hi); }
+.nav-item .nav-badge {
+  margin-left: auto; font-family: var(--mono); font-size: 10px;
+  padding: 1px 7px; border: 1px solid var(--line-rose);
+  color: var(--rose); background: rgba(251,113,133,.08);
+  letter-spacing: .1em;
+}
+
+/* ============ 主内容 ============ */
+.main { padding: 24px 28px; }
+
+/* ---- tab 栏 ---- */
+.tabs { display:flex; align-items:flex-end; gap:4px;
+  border-bottom:1px solid var(--line-1); margin-bottom:20px; }
+.tab { display:flex; align-items:center; gap:8px; padding:9px 14px;
+  font-size:12.5px; font-family:var(--mono); color:var(--text-3); cursor:pointer;
+  border:1px solid transparent; border-bottom:none; position:relative; transition:.15s ease; }
+.tab:hover { color:var(--text-2); background:var(--bg-card); }
+.tab.active { color:var(--text-1); background:var(--bg-elev); border-color:var(--line-1); }
+.tab.active::after { content:""; position:absolute; left:-1px; right:-1px; top:-1px;
+  height:1px; background:var(--mint); box-shadow:0 0 8px var(--mint-glow); }
+.tab .tic { font-size:13px; }
+.tab .tname { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tab .tclose { margin-left:4px; color:var(--text-faint); font-size:14px; }
+.tab .tclose:hover { color:var(--rose); }
+
+/* ---- 区块标题 ---- */
+.section-title {
+  font-family: var(--display); font-size: 20px; font-weight: 700;
+  color: var(--text-1); margin-bottom: 4px;
+}
+.section-sub {
+  font-family: var(--mono); font-size: 11px; color: var(--text-faint);
+  letter-spacing: .18em; text-transform: uppercase; margin-bottom: 20px;
+}
+
+/* ---- 卡片网格 ---- */
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr)); gap:16px; }
+.card {
+  position:relative; overflow:hidden; padding:18px 20px;
+  background:var(--bg-card); border:1px solid var(--line-1);
+  box-shadow:var(--shadow-card); transition:.18s ease; cursor:pointer;
+  animation: card-in .5s cubic-bezier(.22,1,.36,1) both;
+  animation-delay: calc(var(--idx) * 28ms);
+}
+.card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background: var(--accent, var(--mint)); opacity:.5; transition:.18s ease; }
+.card::after { content:""; position:absolute; top:0; right:0; width:60%; height:1px;
+  background: linear-gradient(90deg, transparent, var(--accent, var(--mint)));
+  opacity:0; transition:.18s ease; }
+.card:hover { transform:translateY(-2px); border-color:var(--accent, var(--mint));
+  background:var(--bg-card-hi); box-shadow:var(--shadow-hover); }
+.card:hover::before { opacity:1; box-shadow:0 0 18px var(--accent, var(--mint)); }
+.card:hover::after { opacity:1; }
+.card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.card-name { font-family:var(--display); font-size:16px; font-weight:600;
+  color:var(--text-1); letter-spacing:.02em; }
+.card-no { font-family:var(--mono); font-size:10px; color:var(--text-faint); letter-spacing:.14em; }
+.card-desc { font-size:13px; color:var(--text-3); margin-top:8px; line-height:1.6; }
+.card-foot { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; align-items:center; }
+.card-foot .actions { margin-left: auto; display: flex; gap: 6px; }
+.tg { font-family:var(--mono); font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.18em; padding:3px 7px 2px; border:1px solid var(--line-2); color:var(--text-3); }
+.tg.cat { color:var(--mint); border-color:var(--line-mint); }
+.tg.urgent { color:var(--rose); border-color:var(--line-rose); }
+.tg.amber { color:var(--amber); border-color:var(--line-amber); }
+.tg.violet { color:var(--violet); border-color:var(--line-violet); }
+.tg.cyan { color:var(--cyan); border-color:rgba(103,232,249,.3); }
+
+/* ---- 按钮 ---- */
+.act-btn { background:transparent; border:1px solid var(--line-2); color:var(--text-3);
+  font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.16em;
+  text-transform:uppercase; padding:5px 10px 4px; cursor:pointer; transition:.18s ease; }
+.act-btn.primary { color:var(--mint); border-color:var(--line-mint); background:rgba(74,222,128,.05); }
+.act-btn.danger  { color:var(--rose); border-color:var(--line-rose); background:rgba(251,113,133,.05); }
+.act-btn.violet  { color:var(--violet); border-color:var(--line-violet); background:rgba(167,139,250,.05); }
+.act-btn.amber   { color:var(--amber); border-color:var(--line-amber); background:rgba(251,191,36,.05); }
+.act-btn.cyan    { color:var(--cyan); border-color:rgba(103,232,249,.3); background:rgba(103,232,249,.05); }
+.act-btn:hover:not(:disabled) { filter:brightness(1.15); box-shadow:0 0 14px -4px var(--mint-glow); }
+.act-btn.danger:hover:not(:disabled) { box-shadow:0 0 14px -4px rgba(251,113,133,.4); }
+.act-btn.violet:hover:not(:disabled) { box-shadow:0 0 14px -4px rgba(167,139,250,.4); }
+.act-btn:disabled { opacity:.35; cursor:not-allowed; }
+
+/* ---- 统计行 ---- */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--bg-card); border: 1px solid var(--line-1);
+  padding: 16px 18px; position: relative; overflow: hidden;
+}
+.stat-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background: var(--accent, var(--mint)); opacity: .6; }
+.stat-card .sk { font-family:var(--mono); font-size:10px; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--text-faint); }
+.stat-card .sv { font-family:var(--display); font-size:28px; font-weight:700;
+  color:var(--text-1); margin-top:6px; }
+.stat-card .ss { font-size:12px; color:var(--text-3); margin-top:4px; }
+.runtime-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+.runtime-bar .section-sub { margin:0; }
+.runtime-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.runtime-panel { border:1px solid var(--line-1); background:var(--bg-card); padding:16px 18px; min-width:0; }
+.runtime-panel h3 { font-family:var(--display); font-size:14px; color:var(--text-1); margin-bottom:12px; }
+.runtime-line { display:flex; align-items:baseline; justify-content:space-between; gap:14px; padding:8px 0; border-bottom:1px solid var(--line-1); }
+.runtime-line:last-child { border:0; }
+.runtime-line .label { color:var(--text-3); font-size:12px; flex:none; }
+.runtime-line .value { color:var(--text-1); font:11px var(--mono); text-align:right; overflow-wrap:anywhere; }
+.runtime-line .value.warn { color:var(--amber); }
+.runtime-line .value.ok { color:var(--mint); }
+.runtime-line .value.off { color:var(--rose); }
+.runtime-session { border:1px solid var(--line-1); border-left:3px solid var(--mint); background:var(--bg-card); padding:15px 18px; margin-top:10px; }
+.runtime-session.unknown { border-left-color:var(--text-faint); }
+.runtime-session.busy { border-left-color:var(--cyan); }
+.runtime-session .head { display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap; color:var(--text-1); font:600 13px var(--display); }
+.runtime-session .meta { margin-top:8px; color:var(--text-3); font:11px var(--mono); overflow-wrap:anywhere; }
+.runtime-tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.runtime-alert { border:1px solid var(--line-amber); color:var(--amber); background:rgba(251,191,36,.05); padding:11px 14px; margin-bottom:14px; font-size:12px; }
+.runtime-stack { display:grid; gap:18px; }
+.profile-editor { border:1px solid var(--line-mint); background:linear-gradient(135deg,rgba(74,222,128,.045),rgba(103,232,249,.018)); padding:18px; }
+.profile-editor-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:16px; }
+.profile-editor-head h3 { color:var(--text-1); font:600 15px var(--display); }
+.profile-editor-head p { color:var(--text-3); font-size:12px; margin-top:3px; }
+.profile-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.profile-form { border:1px solid var(--line-1); background:rgba(5,8,15,.48); padding:14px; }
+.profile-form-title { display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--text-1); font:600 12px var(--display); margin-bottom:12px; }
+.profile-form-title span { color:var(--text-faint); font:9px var(--mono); letter-spacing:.14em; text-transform:uppercase; }
+.profile-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.profile-field { display:grid; gap:5px; }
+.profile-field.wide { grid-column:1/-1; }
+.profile-field label { color:var(--text-faint); font:9px var(--mono); letter-spacing:.16em; text-transform:uppercase; }
+.profile-field input,.profile-field textarea,.profile-field select { width:100%; border:1px solid var(--line-2); background:var(--bg-deep); color:var(--text-1); padding:9px 10px; font:11px var(--mono); outline:none; }
+.profile-field textarea { min-height:76px; resize:vertical; }
+.profile-field input:focus,.profile-field textarea:focus,.profile-field select:focus { border-color:var(--line-mint); box-shadow:0 0 0 2px rgba(74,222,128,.06); }
+.profile-actions { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; }
+.profile-hint { color:var(--text-faint); font-size:10px; }
+.pulse-hero { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(280px,.6fr); gap:14px; margin-bottom:18px; }
+.pulse-orbit { position:relative; min-height:190px; overflow:hidden; border:1px solid var(--line-mint); padding:22px; background:radial-gradient(circle at 82% 50%,rgba(74,222,128,.12),transparent 34%),var(--bg-card); }
+.pulse-orbit::after { content:""; position:absolute; width:150px; height:150px; right:26px; top:18px; border:1px dashed var(--line-mint); border-radius:50%; animation:spin 24s linear infinite; }
+.pulse-orbit .pulse-core { position:absolute; right:76px; top:68px; width:52px; height:52px; border:1px solid var(--mint); display:grid; place-items:center; color:var(--mint); font:700 18px var(--display); box-shadow:0 0 35px rgba(74,222,128,.16); }
+.pulse-orbit h2 { max-width:65%; color:var(--text-1); font:700 26px var(--display); }
+.pulse-orbit p { max-width:62%; color:var(--text-3); margin-top:8px; font-size:12px; }
+.pulse-metrics { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.pulse-metric { border:1px solid var(--line-1); background:var(--bg-card); padding:14px; }
+.pulse-metric .n { color:var(--text-1); font:700 24px var(--display); }
+.pulse-metric .k { color:var(--text-faint); font:9px var(--mono); letter-spacing:.17em; text-transform:uppercase; }
+.pulse-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(340px,.72fr); gap:14px; }
+.todo-item,.pulse-history-item { border-bottom:1px solid var(--line-1); padding:13px 0; }
+.todo-item:last-child,.pulse-history-item:last-child { border:0; }
+.todo-head { display:flex; align-items:center; gap:9px; justify-content:space-between; }
+.todo-title { color:var(--text-1); font-weight:600; }
+.todo-context,.pulse-result { color:var(--text-3); font-size:11px; margin-top:4px; }
+.pulse-history-item .reason { color:var(--cyan); font:10px var(--mono); letter-spacing:.12em; text-transform:uppercase; }
+
+/* ---- 会话列表 ---- */
+.conv-list { display: flex; flex-direction: column; gap: 8px; }
+.conv-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 16px; background: var(--bg-card);
+  border: 1px solid var(--line-1); cursor: pointer;
+  transition: .15s ease;
+}
+.conv-item:hover { background: var(--bg-card-hi); border-color: var(--line-mint); }
+.conv-item .ci-type {
+  font-family: var(--mono); font-size: 10px; padding: 2px 8px;
+  border: 1px solid var(--line-violet); color: var(--violet);
+  letter-spacing: .14em; text-transform: uppercase;
+}
+.conv-item .ci-type.direct { border-color: var(--line-mint); color: var(--mint); }
+.conv-item .ci-body { flex: 1; min-width: 0; }
+.conv-item .ci-name { font-size: 14px; font-weight: 600; color: var(--text-1); }
+.conv-item .ci-preview {
+  font-size: 12px; color: var(--text-3); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.conv-item .ci-right { text-align: right; }
+.conv-item .ci-time { font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
+.conv-item .ci-unread {
+  display: inline-block; margin-top: 4px;
+  font-family: var(--mono); font-size: 10px; padding: 1px 7px;
+  border: 1px solid var(--line-rose); color: var(--rose);
+  background: rgba(251,113,133,.08); letter-spacing: .1em;
+}
+
+/* ---- 消息视图 ---- */
+.msg-view { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 0;
+  border: 1px solid var(--line-1); height: calc(100vh - 220px); min-height:620px;
+  background:rgba(5,8,15,.52); box-shadow:var(--shadow-card); }
+.msg-sidebar { border-right: 1px solid var(--line-1); overflow-y: auto;
+  background: var(--bg-deep); }
+.msg-sidebar .ms-head { padding: 12px 14px; font-family:var(--mono); font-size:10px;
+  font-weight:600; letter-spacing:.28em; text-transform:uppercase; color:var(--text-3);
+  border-bottom: 1px solid var(--line-1); display: flex; justify-content: space-between;
+  align-items: center; position: sticky; top: 0; background: var(--bg-deep); z-index: 2; }
+.msg-sidebar .ms-item { display:grid; grid-template-columns:42px minmax(0,1fr) auto;
+  gap:11px; align-items:center; padding:12px 14px; cursor:pointer;
+  border-bottom:1px solid var(--line-1); transition:.12s ease; }
+.msg-sidebar .ms-item:hover { background: var(--bg-card-hi); }
+.msg-sidebar .ms-item.active { background: var(--bg-card-hi); border-left: 2px solid var(--mint);
+  padding-left: 12px; }
+.ms-avatar,.chat-avatar,.contact-avatar { width:42px; height:42px; flex:0 0 42px;
+  display:grid; place-items:center; border:1px solid var(--line-violet);
+  background:rgba(167,139,250,.08); color:var(--violet); font:700 13px var(--display);
+  letter-spacing:.06em; position:relative; }
+.ms-avatar.direct,.chat-avatar.mine,.contact-avatar { border-color:var(--line-mint);
+  background:rgba(74,222,128,.07); color:var(--mint); }
+.avatar-online { position:absolute; right:-2px; bottom:-2px; width:8px; height:8px;
+  border-radius:50%; background:var(--mint); border:2px solid var(--bg-deep);
+  box-shadow:0 0 8px var(--mint-glow); }
+.ms-copy { min-width:0; }
+.msg-sidebar .ms-item .msn { display:flex; gap:8px; align-items:center;
+  font-size:13px; color:var(--text-1); font-weight:600; }
+.msg-sidebar .ms-item .msp { font-size: 11px; color: var(--text-faint); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-tail { align-self:start; text-align:right; min-width:44px; }
+.ms-time { font:9.5px var(--mono); color:var(--text-faint); white-space:nowrap; }
+.ms-unread { display:inline-grid; place-items:center; min-width:20px; height:18px; margin-top:7px;
+  padding:0 5px; border:1px solid var(--line-rose); color:var(--rose);
+  background:rgba(251,113,133,.08); font:700 9px var(--mono); }
+
+.msg-main { display:flex; flex-direction:column; min-width:0; background:
+  radial-gradient(500px 280px at 100% 0%,rgba(74,222,128,.035),transparent 70%); }
+.msg-head {
+  padding: 12px 18px; border-bottom: 1px solid var(--line-1);
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-card);
+}
+.msg-head .mh-title { font-family: var(--display); font-size: 15px; font-weight: 600; color: var(--text-1); }
+.msg-head .mh-meta { font-family: var(--mono); font-size: 10px; color: var(--text-faint);
+  letter-spacing: .14em; text-transform: uppercase; }
+.msg-head .mh-actions { margin-left: auto; display: flex; gap: 6px; }
+
+.msg-list { flex:1; overflow-y:auto; padding:26px 30px 34px; }
+.msg { display:flex; align-items:flex-start; gap:10px; margin-bottom:18px; max-width:78%; }
+.msg-body { min-width:0; }
+.msg .m-from { display:flex; align-items:center; gap:8px; font-family:var(--mono);
+  font-size:10px; color:var(--text-faint); letter-spacing:.06em; margin-bottom:5px; }
+.m-name { color:var(--text-2); font-weight:600; }
+.m-time { color:var(--text-faint); }
+.msg .m-bubble {
+  padding:10px 14px; font-size:13.5px; line-height:1.65;
+  background: var(--bg-card); border: 1px solid var(--line-1);
+  color:var(--text-2); overflow-wrap:anywhere;
+}
+.msg.mine { margin-left:auto; flex-direction:row-reverse; text-align:left; }
+.msg.mine .m-from { justify-content:flex-end; }
+.msg.mine .m-bubble { background: rgba(74,222,128,.06); border-color: var(--line-mint);
+  color: var(--text-1); }
+.msg.system { display:block; text-align:center; max-width:100%; }
+.msg.system .m-bubble { background: transparent; border: none;
+  color: var(--text-faint); font-size: 12px; font-style: italic; }
+
+/* ---- 通讯录 ---- */
+.friend-group { margin-bottom: 20px; }
+.friend-group .fg-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; margin-bottom: 6px;
+  border-bottom: 1px solid var(--line-1);
+}
+.friend-group .fg-title {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  letter-spacing: .24em; text-transform: uppercase; color: var(--text-3);
+}
+.friend-group .fg-count {
+  font-family: var(--mono); font-size: 10px; color: var(--text-faint);
+}
+.contacts-shell { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; align-items:start; }
+.contacts-main,.contacts-aside { border:1px solid var(--line-1); background:var(--bg-card); }
+.contact-toolbar { display:flex; align-items:center; gap:12px; padding:12px 14px;
+  border-bottom:1px solid var(--line-1); }
+.contact-toolbar input { flex:1; height:36px; }
+.friend-list { display:flex; flex-direction:column; gap:0; }
+.friend-item {
+  display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:12px;
+  padding:12px 14px; background:transparent;
+  border:0; border-bottom:1px solid var(--line-1); cursor:pointer;
+  transition: .15s ease;
+}
+.friend-item:hover { background:var(--bg-card-hi); }
+.friend-item .fi-status { width: 8px; height: 8px; border-radius: 50%; background: var(--text-faint);
+  flex-shrink: 0; }
+.friend-item .fi-status.online { background: var(--mint); box-shadow: 0 0 8px var(--mint-glow); }
+.friend-item .fi-name { font-size: 13.5px; color: var(--text-1); font-weight: 500; }
+.friend-item .fi-status-text { font-size:11px; color:var(--text-faint); margin-top:2px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.friend-item .fi-meta { margin-left: auto; text-align: right; }
+.friend-item .fi-trust {
+  font-family: var(--mono); font-size: 9.5px; padding: 1px 6px;
+  letter-spacing: .14em; text-transform: uppercase;
+  border: 1px solid var(--line-2); color: var(--text-3);
+}
+.friend-item .fi-trust.high { border-color: var(--line-mint); color: var(--mint); }
+.friend-item .fi-trust.medium { border-color: var(--line-amber); color: var(--amber); }
+.friend-item .fi-trust.low { border-color: var(--line-rose); color: var(--rose); }
+.contact-summary { padding:18px; }
+.contact-summary .big { font:700 34px var(--display); color:var(--text-1); }
+.contact-summary .label { font:10px var(--mono); color:var(--text-faint);
+  letter-spacing:.2em; text-transform:uppercase; }
+.inbox-explain { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+.inbox-note { border:1px solid var(--line-1); border-left:3px solid var(--cyan);
+  background:var(--bg-card); padding:14px 16px; }
+.inbox-note strong { display:block; color:var(--text-1); font:600 13px var(--display); }
+.inbox-note span { display:block; color:var(--text-3); font-size:12px; margin-top:4px; }
+
+/* ---- 设置 ---- */
+.settings-block { margin-bottom: 24px; }
+.settings-block .sb-title {
+  font-family: var(--display); font-size: 16px; font-weight: 600;
+  color: var(--text-1); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+.settings-block .sb-title::before {
+  content: "◈"; color: var(--mint); font-size: 12px;
+}
+.settings-card {
+  background: var(--bg-card); border: 1px solid var(--line-1);
+  padding: 4px 0;
+}
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px; border-bottom: 1px solid var(--line-1);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-row .sr-label { font-size: 13px; color: var(--text-2); }
+.setting-row .sr-label .srl-sub { font-family: var(--mono); font-size: 10px;
+  color: var(--text-faint); margin-top: 2px; letter-spacing: .1em; }
+.setting-row .sr-value { display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 12px; color: var(--text-1); }
+.setting-row .sr-value .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+.setting-row .sr-value .status-dot.on { background: var(--mint); box-shadow: 0 0 8px var(--mint-glow); }
+.setting-row .sr-value .status-dot.off { background: var(--text-faint); }
+
+/* ---- 空状态 ---- */
+.empty { padding:80px 32px; text-align:center; border:1px dashed var(--line-2);
+  background:var(--bg-deep); }
+.empty .glyph { font-size:72px; color:var(--text-faint); line-height:1; }
+.empty .tip { font-family:var(--display); font-size:16px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--text-3); margin-top:16px; }
+.empty .sub { font-size:12.5px; color:var(--text-faint); margin-top:6px; }
+
+/* ---- 底部状态栏 ---- */
+footer { position:fixed; bottom:0; left:0; right:0; height:30px; z-index:40;
+  display:flex; align-items:center;
+  background:var(--bg-void); border-top:1px solid var(--line-1);
+  font-family:var(--mono); font-size:11px; color:var(--text-3); }
+footer .seg { padding:0 14px; height:100%; display:flex; align-items:center;
+  border-right:1px solid var(--line-1); white-space:nowrap; gap: 6px; }
+footer .seg .k { color:var(--text-faint); letter-spacing:.14em;
+  text-transform:uppercase; font-size:10px; }
+footer .spacer { flex:1; }
+footer .seg.right { border-right: none; border-left: 1px solid var(--line-1); }
+
+/* ---- 右键菜单 ---- */
+#ctx-menu { position:fixed; min-width:200px; display:none; z-index:200;
+  background:var(--bg-elev); border:1px solid var(--line-2); padding:6px;
+  box-shadow:0 20px 40px -12px rgba(0,0,0,.7); }
+.cmi { display:flex; align-items:center; gap:9px; padding:7px 12px;
+  font-size:12.5px; color:var(--text-2); cursor:pointer; transition:.12s ease; }
+.cmi:hover { background:var(--bg-card-hi); color:var(--text-1); }
+.cmi.danger { color:var(--rose); }
+.cmi.danger:hover { background:rgba(251,113,133,.1); }
+.cmi.disabled { opacity:.35; pointer-events:none; }
+.cmi .g { width:16px; text-align:center; color:var(--text-3); font-size: 12px; }
+.cm-sep { height:1px; background:var(--line-1); margin:5px 8px; }
+
+/* ---- toast ---- */
+#toast { position:fixed; bottom:52px; left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--bg-elev); border:1px solid var(--line-mint); color:var(--mint);
+  font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+  padding:11px 20px; opacity:0; pointer-events:none; transition:.25s ease;
+  box-shadow:0 12px 30px rgba(0,0,0,.5), 0 0 20px -6px var(--mint-glow);
+  display:flex; align-items:center; gap:9px; z-index:100; }
+#toast::before { content:""; width:6px; height:6px; border-radius:50%;
+  background:var(--mint); box-shadow:0 0 8px var(--mint-glow); }
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+#toast.err { border-color:rgba(251,113,133,.4); color:var(--rose); }
+#toast.err::before { background:var(--rose); box-shadow:0 0 8px rgba(251,113,133,.45); }
+
+/* ---- 动画 ---- */
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes pulse { 50% { opacity:.5; transform:scale(.75); } }
+@keyframes card-in { from { opacity:0; transform:translateY(10px); filter:blur(4px); } }
+
+/* ---- 滚动条 ---- */
+::-webkit-scrollbar { width:8px; height:8px; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ---- 响应式 ---- */
+@media (max-width:1200px){
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .contacts-shell { grid-template-columns:1fr; }
+}
+@media (max-width:900px){
+  .page { grid-template-columns: 1fr; }
+  .sidebar { position: static; min-height: auto; border-right: none;
+    border-bottom: 1px solid var(--line-1); }
+  .msg-view { grid-template-columns: 1fr; height: auto; }
+  .runtime-grid { grid-template-columns:1fr; }
+  .profile-form-grid { grid-template-columns:1fr; }
+  .pulse-hero,.pulse-columns { grid-template-columns:1fr; }
+}
+@media (max-width:720px){
+  .topbar { grid-template-columns: 1fr auto; gap:12px; padding:12px 20px; }
+  .brand { grid-column: 1 / -1; }
+  .main { padding: 16px; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .grid { grid-template-columns: 1fr; }
+  .msg-sidebar { max-height:280px; border-right:none; border-bottom:1px solid var(--line-1); }
+  .msg-main { min-height:500px; }
+  .inbox-explain { grid-template-columns:1fr; }
+  .profile-fields { grid-template-columns:1fr; }
+  .profile-field.wide { grid-column:auto; }
+}
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<!-- ============ 顶栏 ============ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark"><span class="ring"></span><span class="core">Pingo</span></div>
+    <div>
+      <div class="brand-name">Pingo Sidecar</div>
+      <div class="brand-sub">本机通信与会话控制台</div>
+    </div>
+  </div>
+
+  <div></div>
+
+  <div class="agent-switch" id="agentSwitch">
+    <div>
+      <div class="as-label">ACTIVE AGENT</div>
+      <div class="as-name" id="currentAgentName">加载中…</div>
+    </div>
+    <span class="as-caret">▾</span>
+    <div class="agent-dropdown" id="agentDropdown"></div>
+  </div>
+
+  <span class="status-pill on" id="statusPill"><span class="dot"></span>SIDECAR · ONLINE</span>
+</header>
+
+<!-- ============ 主布局 ============ -->
+<div class="page">
+  <!-- 侧栏导航 -->
+  <aside class="sidebar">
+    <div class="panel-head"><span>◈ NAVIGATION</span><span class="tag" id="navCount">07</span></div>
+    <nav id="nav">
+      <div class="nav-item active" data-view="overview">
+        <span class="g">◈</span>运行概览
+      </div>
+      <div class="nav-item" data-view="approvals">
+        <span class="g">⚑</span>审批中心
+        <span class="nav-badge" id="approvalBadge" style="display:none">0</span>
+      </div>
+      <div class="nav-item" data-view="inbox">
+        <span class="g">▤</span>收件箱
+        <span class="nav-badge" id="inboxBadge" style="display:none">0</span>
+      </div>
+      <div class="nav-item" data-view="conversations">
+        <span class="g">◧</span>会话
+      </div>
+      <div class="nav-item" data-view="friends">
+        <span class="g">◇</span>通讯录
+      </div>
+      <div class="nav-item" data-view="pulse">
+        <span class="g">⌁</span>自主活动
+      </div>
+      <div class="nav-item" data-view="settings">
+        <span class="g">⚙</span>系统设置
+      </div>
+    </nav>
+  </aside>
+
+  <!-- 主内容 -->
+  <main class="main" id="mainView">
+    <!-- 动态渲染 -->
+  </main>
+</div>
+
+<!-- ============ 底部状态栏 ============ -->
+<footer>
+  <div class="seg"><span class="k">SIDECAR</span><span id="fSidecar">127.0.0.1:19191</span></div>
+  <div class="seg"><span class="k">AGENT</span><span id="fAgent">-</span></div>
+  <div class="seg"><span class="k">VIEW</span><span id="fView">OVERVIEW</span></div>
+  <div class="spacer"></div>
+  <div class="seg right"><span class="k">PENDING</span><span id="fPending">0</span></div>
+  <div class="seg right"><span class="k">UPTIME</span><span id="fUptime">--:--:--</span></div>
+</footer>
+
+<!-- ============ 右键菜单 ============ -->
+<div id="ctx-menu"></div>
+
+<!-- ============ Toast ============ -->
+<div id="toast"></div>
+
+<script>
+/* ============ 常量与工具 ============ */
+const API_BASE = 'http://127.0.0.1:19191';
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const pad = n => String(n).padStart(2, '0');
+const startTime = Date.now();
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  if (currentAgent && !opts.noAgent) {
+    headers['X-Agent-ID'] = currentAgent;
+  }
+  try {
+    const res = await fetch(API_BASE + path, { ...opts, headers });
+    return await res.json();
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+let toastTimer = null;
+function flash(msg, isErr = false) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.toggle('err', isErr);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), isErr ? 2800 : 2000);
+}
+
+/* ============ 右键菜单 ============ */
+const ctxEl = $('#ctx-menu');
+function showCtx(x, y, items){
+  ctxEl.innerHTML = "";
+  for(const it of items){
+    if(it.sep){
+      const s = document.createElement("div"); s.className = "cm-sep";
+      ctxEl.appendChild(s); continue;
+    }
+    const d = document.createElement("div");
+    d.className = "cmi" + (it.danger ? " danger" : "") + (it.disabled ? " disabled" : "");
+    const g = document.createElement("span"); g.className = "g"; g.textContent = it.g || "";
+    const l = document.createElement("span"); l.textContent = it.label;
+    d.append(g, l);
+    if(!it.disabled){
+      d.addEventListener("click", async () => {
+        hideCtx();
+        try{ await it.act(); }
+        catch(e){ flash("失败: " + e.message, true); }
+      });
+    }
+    ctxEl.appendChild(d);
+  }
+  ctxEl.style.display = "block";
+  ctxEl.style.left = "0px"; ctxEl.style.top = "0px";
+  const r = ctxEl.getBoundingClientRect();
+  ctxEl.style.left = Math.max(4, Math.min(x, innerWidth - r.width - 8)) + "px";
+  ctxEl.style.top = Math.max(4, Math.min(y, innerHeight - r.height - 8)) + "px";
+}
+function hideCtx(){ ctxEl.style.display = "none"; }
+document.addEventListener("click", e => { if(!ctxEl.contains(e.target)) hideCtx(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape") hideCtx(); });
+window.addEventListener("blur", hideCtx);
+
+/* ============ 状态 ============ */
+let agents = [];
+let currentAgent = null;
+let currentView = 'overview';
+let currentConv = null;
+
+/* ============ Agent 切换器 ============ */
+async function loadAgents() {
+  const data = await api('/agents', { noAgent: true });
+  if (!data.ok || !data.data || data.data.length === 0) {
+    agents = [];
+    currentAgent = null;
+    $('#currentAgentName').textContent = '无可用 Agent';
+    updateFooter();
+    if (currentView === 'overview') renderOverview();
+    return;
+  }
+  agents = data.data;
+  if (!currentAgent || !agents.find(a => a.agent_id === currentAgent)) {
+    currentAgent = agents[0].agent_id;
+  }
+  renderAgentSwitch();
+  updateFooter();
+  if (currentView === 'inbox') renderInbox();
+  else if (currentView === 'conversations') renderConversations();
+  else if (currentView === 'friends') renderFriends();
+  else if (currentView === 'pulse') renderPulse();
+  else if (currentView === 'overview') renderOverview();
+}
+
+function renderAgentSwitch() {
+  const cur = agents.find(a => a.agent_id === currentAgent);
+  $('#currentAgentName').textContent = cur ? cur.name : '未选择';
+  const dd = $('#agentDropdown');
+  dd.innerHTML = agents.map(a => `
+    <div class="ad-item ${a.agent_id === currentAgent ? 'active' : ''}" data-id="${a.agent_id}">
+      <span class="status-dot ${a.connected ? 'online' : ''}" style="width:7px;height:7px;border-radius:50%;background:${a.connected ? 'var(--mint)' : 'var(--text-faint)'};${a.connected ? 'box-shadow:0 0 8px var(--mint-glow)' : ''}"></span>
+      <span class="ad-name">${escapeHtml(a.name)}</span>
+      <span class="ad-id">${escapeHtml(a.agent_id)}</span>
+    </div>
+  `).join('');
+  $$('.ad-item').forEach(el => {
+    el.addEventListener('click', () => {
+      currentAgent = el.dataset.id;
+      $('#agentDropdown').classList.remove('show');
+      renderAgentSwitch();
+      updateFooter();
+      refreshCurrentView();
+    });
+  });
+}
+
+$('#agentSwitch').addEventListener('click', e => {
+  e.stopPropagation();
+  $('#agentDropdown').classList.toggle('show');
+});
+document.addEventListener('click', () => {
+  $('#agentDropdown').classList.remove('show');
+});
+
+/* ============ 导航 ============ */
+$$('#nav .nav-item').forEach(n => n.addEventListener('click', () => {
+  $$('#nav .nav-item').forEach(x => x.classList.remove('active'));
+  n.classList.add('active');
+  currentView = n.dataset.view;
+  currentConv = null;
+  $('#fView').textContent = currentView.toUpperCase();
+  refreshCurrentView();
+}));
+
+function refreshCurrentView() {
+  switch (currentView) {
+    case 'overview': renderOverview(); break;
+    case 'approvals': renderApprovals(); break;
+    case 'inbox': renderInbox(); break;
+    case 'conversations': renderConversations(); break;
+    case 'friends': renderFriends(); break;
+    case 'pulse': renderPulse(); break;
+    case 'settings': renderSettings(); break;
+  }
+}
+
+const wakeLabels = {
+  unknown: '状态未确认', busy: '忙碌', free: '空闲'
+};
+const reasonLabels = {
+  status_stale: '窗口状态心跳已过期',
+  interaction_required: '需要人机交互或权限确认',
+  awaiting_hook: '已写入终端，等待 Claude Hook 确认'
+};
+const evidenceLabels = {
+  session_started: '会话初始化', hook_session_start: 'SessionStart Hook',
+  hook_user_prompt_submit: 'UserPromptSubmit Hook', hook_stop: 'Stop Hook',
+  awaiting_hook: 'Pingo 已投递，等待 Hook'
+};
+const displayValue = value => value === undefined || value === null || value === '' ? '未设置' : escapeHtml(value);
+const fullTime = value => value && !Number.isNaN(new Date(value).getTime()) ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '无记录';
+
+async function renderOverview() {
+  const agentID = currentAgent;
+  const main = $('#mainView');
+  main.innerHTML = `<div class="runtime-bar"><div><h2 class="section-title">运行概览</h2><div class="section-sub">LOCAL OPERATIONS · AGENT / SESSION / HUB</div></div><button class="act-btn cyan" id="refreshOverview" title="刷新运行概览">↻ 刷新</button></div>
+    <div id="overviewContent"><div class="empty"><div class="glyph">◌</div><div class="tip">LOADING</div><div class="sub">正在读取本机与 Hub 的实时状态…</div></div></div>`;
+  $('#refreshOverview').addEventListener('click', renderOverview);
+  if (!agentID) {
+    $('#overviewContent').innerHTML = `<div class="empty"><div class="glyph">∅</div><div class="tip">NO AGENT</div><div class="sub">本机尚未注册 Agent。</div></div>`;
+    return;
+  }
+  const [statusResult, inboxResult, requestsResult, sessionsResult, profileResult] = await Promise.all([
+    api('/status', { noAgent: true }), api('/inbox'), api('/friends/requests'),
+    api(`/pingo/sessions?agent_id=${encodeURIComponent(agentID)}`, { noAgent: true }), api('/me')
+  ]);
+  if (currentView !== 'overview' || currentAgent !== agentID) return;
+  const container = $('#overviewContent');
+  if (!container) return;
+  const managedAgent = (statusResult.data?.agents || []).find(agent => agent.agent_id === agentID);
+  const sessions = sessionsResult.ok && Array.isArray(sessionsResult.data) ? sessionsResult.data : [];
+  const unread = inboxResult.ok ? inboxResult.data?.total_unread || 0 : null;
+  const requests = requestsResult.ok && Array.isArray(requestsResult.data) ? requestsResult.data.length : null;
+  const profile = profileResult.ok ? profileResult.data : null;
+  const capabilities = Array.isArray(profile?.capabilities) ? profile.capabilities : [];
+  const availability = profile?.availability || {};
+  const activeWindows = sessions.length;
+  const pendingTotal = unread === null || requests === null ? null : unread + requests;
+  const missing = [!statusResult.ok && '本机状态', !inboxResult.ok && '收件箱', !requestsResult.ok && '好友申请', !sessionsResult.ok && '窗口列表', !profileResult.ok && 'Hub 资料'].filter(Boolean);
+  container.innerHTML = `<div class="runtime-stack">
+    ${missing.length ? `<div class="runtime-alert">以下数据暂不可用：${escapeHtml(missing.join('、'))}。${profileResult.error ? ` Hub：${escapeHtml(profileResult.error)}` : ''}</div>` : ''}
+    <div class="stats-row">
+      <div class="stat-card" style="--accent:var(--mint)"><div class="sk">HUB CONNECTION</div><div class="sv">${statusResult.ok && managedAgent ? (managedAgent.connected ? '在线' : '离线') : '未知'}</div><div class="ss">当前 Agent 的云端连接</div></div>
+      <div class="stat-card" style="--accent:var(--cyan)"><div class="sk">CLI WINDOWS</div><div class="sv">${pad(activeWindows)}</div><div class="ss">当前 Agent 的本机窗口</div></div>
+      <div class="stat-card" style="--accent:var(--amber)"><div class="sk">UNREAD MESSAGES</div><div class="sv">${unread === null ? '—' : pad(unread)}</div><div class="ss">Sidecar 中未读消息</div></div>
+      <div class="stat-card" style="--accent:var(--violet)"><div class="sk">FRIEND REQUESTS</div><div class="sv">${requests === null ? '—' : pad(requests)}</div><div class="ss">Sidecar 中待处理申请</div></div>
+    </div>
+    <section><h3 class="section-title">CLI 窗口</h3><div class="section-sub">SESSION TELEMETRY · 每 10 秒刷新 · 待办保存在 Sidecar 收件箱，不保存在窗口中</div>
+    <div class="runtime-panel">${profileRow('当前未处理', pendingTotal === null ? '数据不可用' : `${pendingTotal} 项（${unread} 条未读消息 / ${requests} 条好友申请）`)}${profileRow('投递策略', '交互式 pingo claude 只按 free / busy 判断：free 就按 FIFO 投递，busy 就排队等待')}</div>
+    ${sessions.length ? sessions.map(item => {
+      const state = item.status || {};
+      const reason = reasonLabels[state.reason] || state.reason || '—';
+      const evidence = evidenceLabels[state.evidence] || state.evidence || '—';
+      const history = Array.isArray(state.history) ? state.history.slice().reverse() : [];
+      const cssState = ['busy', 'unknown'].includes(state.state) ? state.state : '';
+      return `<div class="runtime-session ${cssState}">
+        <div class="head"><span>${escapeHtml(item.provider)} · ${escapeHtml(wakeLabels[state.state] || '状态未知')}</span><span class="tg ${state.pending ? 'amber' : 'cat'}">${state.pending ? '待检查 Sidecar' : '无窗口唤醒信号'}</span></div>
+        <div class="meta">${escapeHtml(item.id)} · ${escapeHtml(item.cwd || '未记录工作目录')} · ${item.primary ? '主会话' : '次会话'}</div>
+        <div class="runtime-tags"><span class="tg cyan">证据 ${escapeHtml(evidence)}</span><span class="tg">原因 ${escapeHtml(reason)}</span><span class="tg">转换 ${escapeHtml(fullTime(state.transition_at))}</span><span class="tg">序号 ${escapeHtml(state.sequence || 0)}</span><span class="tg">心跳 ${escapeHtml(fullTime(state.updated_at))}</span><span class="tg">最近事件 ${escapeHtml(fullTime(state.last_event_at))}</span><span class="tg">投递尝试 ${escapeHtml(fullTime(state.last_attempt_at))}</span><span class="tg cat">成功提交 ${escapeHtml(fullTime(state.last_wake_at))}</span></div>
+        <div class="runtime-alert">状态说明：${escapeHtml(state.detail || '无详细证据')}</div>
+        ${history.length ? `<div class="runtime-panel"><h3>最近状态转换</h3>${history.map(entry => `<div class="runtime-line"><span class="label">#${escapeHtml(entry.sequence || 0)} · ${escapeHtml(wakeLabels[entry.state] || entry.state || '未知')} · ${escapeHtml(fullTime(entry.transition_at))}</span><span class="value">${escapeHtml(evidenceLabels[entry.evidence] || entry.evidence || '无证据')} · ${escapeHtml(entry.detail || reasonLabels[entry.reason] || entry.reason || '无详情')}</span></div>`).join('')}</div>` : ''}
+      </div>`;
+    }).join('') : `<div class="empty"><div class="glyph">◇</div><div class="tip">NO ACTIVE WINDOW</div><div class="sub">用 pingo claude 启动后，窗口状态会出现在这里；没有窗口时消息仍留在 Sidecar。</div></div>`}
+    </section>
+    <section><h3 class="section-title">Agent 资料</h3><div class="section-sub">HUB PROFILE · 云端当前值，不含凭据</div>
+      ${profile ? `<div class="runtime-grid">
+        <div class="runtime-panel"><h3>身份与归属</h3>
+          ${profileRow('显示名称', profile.name)}${profileRow('Agent ID', profile.agent_id)}${profileRow('主人', profile.owner_name)}${profileRow('联系邮箱', profile.owner_email)}${profileRow('状态签名', profile.status_text)}${profileRow('头像地址', profile.avatar_url)}
+          ${profileRow('Hub 在线', profile.online ? '在线' : '离线')}${profileRow('创建时间', fullTime(profile.created_at))}${profileRow('资料更新', fullTime(profile.updated_at))}${profileRow('最后心跳', fullTime(profile.last_heartbeat))}
+        </div><div class="runtime-panel"><h3>能力与接单偏好</h3>
+          ${profileRow('接单模式', availability.mode)}${profileRow('在线时间', availability.online_hours)}${profileRow('时区', availability.timezone)}${profileRow('最大并行会话', availability.max_concurrent_conversations ?? '未设置')}
+          <div class="runtime-line"><span class="label">能力标签</span><span class="value">${capabilities.length ? capabilities.map(cap => `${escapeHtml(cap.skill || '未命名')}${Array.isArray(cap.tags) && cap.tags.length ? ` · ${cap.tags.map(escapeHtml).join(' / ')}` : ''}`).join('<br>') : '未设置'}</span></div>
+        </div>
+      </div>
+      <div class="profile-editor">
+        <div class="profile-editor-head"><div><h3>Agent 自治资料台</h3><p>公开资料和接单偏好由当前 Agent 自主管理；Agent ID、在线状态和时间字段由系统维护。</p></div><span class="tg cat">SELF MANAGED</span></div>
+        <div class="profile-form-grid">
+          <form class="profile-form" id="publicProfileForm"><div class="profile-form-title">公开资料 <span>PUBLIC</span></div><div class="profile-fields">
+            ${profileInput('profileName','显示名称',profile.name)}${profileInput('profileAvatar','头像 URL',profile.avatar_url)}${profileTextarea('profileStatus','状态签名',profile.status_text)}
+          </div><div class="profile-actions"><span class="profile-hint">其他 Agent 可见</span><button class="act-btn primary" type="submit">保存公开资料</button></div></form>
+          <form class="profile-form" id="ownerProfileForm"><div class="profile-form-title">归属资料 <span>SENSITIVE</span></div><div class="profile-fields">
+            ${profileInput('profileOwner','主人',profile.owner_name)}${profileInput('profileEmail','联系邮箱',profile.owner_email,'email')}
+          </div><div class="profile-actions"><span class="profile-hint">仅在主人明确提供或授权时填写</span><button class="act-btn amber" type="submit">保存归属资料</button></div></form>
+          <form class="profile-form" id="availabilityForm"><div class="profile-form-title">接单偏好 <span>AVAILABILITY</span></div><div class="profile-fields">
+            ${profileInput('availabilityMode','接单模式',availability.mode)}${profileInput('availabilityHours','在线时间',availability.online_hours)}${profileInput('availabilityTimezone','时区',availability.timezone)}${profileInput('availabilityMax','最大并行会话',availability.max_concurrent_conversations ?? 0,'number')}
+          </div><div class="profile-actions"><span class="profile-hint">并行数填 0 表示未设置</span><button class="act-btn cyan" type="submit">保存接单偏好</button></div></form>
+          <form class="profile-form" id="capabilitiesForm"><div class="profile-form-title">能力标签 <span>JSON</span></div><div class="profile-fields">
+            ${profileTextarea('profileCapabilities','能力列表 JSON',JSON.stringify(capabilities,null,2))}
+          </div><div class="profile-actions"><span class="profile-hint">格式：[{"skill":"软件开发","tags":["Go"]}]</span><button class="act-btn violet" type="submit">保存能力标签</button></div></form>
+        </div>
+      </div>` : `<div class="runtime-alert">无法从 Hub 读取 Agent 资料。不会用本机旧配置冒充云端数据。</div>`}
+    </section>
+  </div>`;
+  if (profile) bindProfileEditor();
+}
+
+function profileRow(label, value) {
+  return `<div class="runtime-line"><span class="label">${escapeHtml(label)}</span><span class="value">${displayValue(value)}</span></div>`;
+}
+
+function profileInput(id, label, value, type = 'text') {
+  return `<div class="profile-field"><label for="${id}">${escapeHtml(label)}</label><input id="${id}" type="${type}" value="${escapeHtml(value ?? '')}" ${type === 'number' ? 'min="0"' : ''}></div>`;
+}
+
+function profileTextarea(id, label, value) {
+  return `<div class="profile-field wide"><label for="${id}">${escapeHtml(label)}</label><textarea id="${id}">${escapeHtml(value ?? '')}</textarea></div>`;
+}
+
+function bindProfileEditor() {
+  const submit = (formID, path, payload) => {
+    $(formID).addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = event.currentTarget.querySelector('button[type=submit]');
+      button.disabled = true;
+      let body;
+      try { body = payload(); }
+      catch (error) { button.disabled = false; flash(`输入格式错误：${error.message}`, true); return; }
+      const result = await api(path, { method:'PUT', body:JSON.stringify(body) });
+      button.disabled = false;
+      if (!result.ok) return flash(result.error || '保存失败', true);
+      flash('Agent 资料已同步到 Hub');
+      await loadAgents();
+    });
+  };
+  submit('#publicProfileForm','/me/profile',() => ({ name:$('#profileName').value.trim(), avatar_url:$('#profileAvatar').value.trim(), status_text:$('#profileStatus').value.trim() }));
+  submit('#ownerProfileForm','/me/owner',() => ({ owner_name:$('#profileOwner').value.trim(), owner_email:$('#profileEmail').value.trim() }));
+  submit('#availabilityForm','/me/availability',() => ({ availability:{ mode:$('#availabilityMode').value.trim(), online_hours:$('#availabilityHours').value.trim(), timezone:$('#availabilityTimezone').value.trim(), max_concurrent_conversations:Number($('#availabilityMax').value || 0) } }));
+  submit('#capabilitiesForm','/me/capabilities',() => ({ capabilities:JSON.parse($('#profileCapabilities').value || '[]') }));
+}
+
+/* ============ 审批中心 ============ */
+async function renderApprovals() {
+  const main = $('#mainView');
+  main.innerHTML = `
+    <h2 class="section-title">审批中心</h2>
+    <div class="section-sub">PENDING APPROVALS · 跨 Agent 聚合</div>
+    <div id="approvalContent"><div class="empty"><div class="glyph">◌</div><div class="tip">LOADING</div><div class="sub">正在加载待审批项…</div></div></div>
+  `;
+
+  const data = await api('/approvals/pending', { noAgent: true });
+  const el = $('#approvalContent');
+  if (!data.ok) {
+    el.innerHTML = `<div class="empty"><div class="glyph">✕</div><div class="tip">LOAD FAILED</div><div class="sub">${escapeHtml(data.error || '加载失败')}</div></div>`;
+    updateBadges(0);
+    return;
+  }
+  const items = data.data || [];
+  updateBadges(items.length);
+
+  if (items.length === 0) {
+    el.innerHTML = `
+      <div class="stats-row">
+        <div class="stat-card" style="--accent: var(--mint)">
+          <div class="sk">待处理</div>
+          <div class="sv">0</div>
+          <div class="ss">所有审批已处理完毕 ✓</div>
+        </div>
+      </div>
+      <div class="empty"><div class="glyph">✓</div><div class="tip">ALL CLEAR</div><div class="sub">暂无待处理审批，一切尽在掌控</div></div>
+    `;
+    return;
+  }
+
+  // 按 agent 分组统计
+  const byAgent = {};
+  items.forEach(a => {
+    byAgent[a.agent_id] = (byAgent[a.agent_id] || 0) + 1;
+  });
+  const urgentCount = items.filter(a => a.urgency === 'urgent' || a.urgency === 'high').length;
+
+  el.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card" style="--accent: var(--rose)">
+        <div class="sk">待处理总数</div>
+        <div class="sv">${items.length}</div>
+        <div class="ss">来自 ${Object.keys(byAgent).length} 个 Agent</div>
+      </div>
+      <div class="stat-card" style="--accent: var(--amber)">
+        <div class="sk">紧急 / 高优</div>
+        <div class="sv">${urgentCount}</div>
+        <div class="ss">需要立即处理</div>
+      </div>
+      <div class="stat-card" style="--accent: var(--violet)">
+        <div class="sk">涉及 Agent</div>
+        <div class="sv">${Object.keys(byAgent).length}</div>
+        <div class="ss">${Object.entries(byAgent).map(([k,v]) => `${escapeHtml(k)}:${v}`).join(' · ')}</div>
+      </div>
+      <div class="stat-card" style="--accent: var(--cyan)">
+        <div class="sk">平均等待</div>
+        <div class="sv">--</div>
+        <div class="ss">待处理中</div>
+      </div>
+    </div>
+
+    <div class="grid" id="approvalGrid"></div>
+  `;
+
+  const grid = $('#approvalGrid');
+  items.forEach((a, i) => {
+    const urgencyClass = a.urgency === 'urgent' ? 'urgent' :
+                         a.urgency === 'high' ? 'amber' :
+                         a.urgency === 'low' ? 'cyan' : 'cat';
+    const accent = a.urgency === 'urgent' ? 'var(--rose)' :
+                   a.urgency === 'high' ? 'var(--amber)' :
+                   a.urgency === 'low' ? 'var(--cyan)' : 'var(--mint)';
+
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.style.setProperty('--idx', i);
+    el.style.setProperty('--accent', accent);
+    el.innerHTML = `
+      <div class="card-top">
+        <div>
+          <div class="card-name">${escapeHtml(a.title || a.question)}</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-faint);margin-top:4px;letter-spacing:.1em">
+            #${a.id} · ${escapeHtml(a.agent_name)}
+          </div>
+        </div>
+        <span class="tg ${urgencyClass}">${escapeHtml(a.urgency || 'normal')}</span>
+      </div>
+      <div class="card-desc">${escapeHtml(a.question || '')}</div>
+      <div class="card-foot">
+        <span class="tg">${escapeHtml(a.type || 'general')}</span>
+        <span class="tg" style="color:var(--text-faint)">${formatTime(a.created_at)}</span>
+        <div class="actions">
+          <button class="act-btn primary" data-act="approve">✓ APPROVE</button>
+          <button class="act-btn danger" data-act="reject">✕ REJECT</button>
+        </div>
+      </div>
+    `;
+
+    el.querySelector('[data-act="approve"]').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const comment = prompt('批准备注（可选）：', '');
+      if (comment === null) return;
+      await decideApproval(a.id, 'approve', comment || '');
+    });
+    el.querySelector('[data-act="reject"]').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const comment = prompt('拒绝原因（可选）：', '');
+      if (comment === null) return;
+      await decideApproval(a.id, 'reject', comment || '');
+    });
+
+    el.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showCtx(e.clientX, e.clientY, [
+        { g: "✓", label: "批准", act: () => decideApproval(a.id, 'approve', '') },
+        { g: "✎", label: "批准并备注", act: () => {
+          const c = prompt('批准备注：', '');
+          if (c !== null) decideApproval(a.id, 'approve', c);
+        }},
+        { g: "✕", label: "拒绝", danger: true, act: () => decideApproval(a.id, 'reject', '') },
+        { g: "✎", label: "拒绝并说明", danger: true, act: () => {
+          const c = prompt('拒绝原因：', '');
+          if (c !== null) decideApproval(a.id, 'reject', c);
+        }},
+        { sep: true },
+        { g: "⌘", label: "复制审批 ID", act: () => { navigator.clipboard?.writeText(a.id); flash("已复制 ID"); } },
+      ]);
+    });
+
+    grid.appendChild(el);
+  });
+}
+
+async function decideApproval(id, decision, comment) {
+  const res = await api(`/approvals/${id}/decide`, {
+    method: 'POST',
+    body: JSON.stringify({ decision, comment }),
+    noAgent: true
+  });
+  if (res.ok) {
+    flash(decision === 'approve' ? '已批准' : '已拒绝');
+    renderApprovals();
+  } else {
+    flash('操作失败: ' + (res.error || '未知错误'), true);
+  }
+}
+
+/* ============ 收件箱 ============ */
+async function renderInbox() {
+  const main = $('#mainView');
+  main.innerHTML = `
+    <h2 class="section-title">收件箱</h2>
+    <div class="section-sub">ACTION CENTER · 只收纳尚未处理的消息与好友申请</div>
+    <div id="inboxContent"><div class="empty"><div class="glyph">◌</div><div class="tip">LOADING</div><div class="sub">正在加载收件箱…</div></div></div>
+  `;
+
+  const [data, requestsData] = await Promise.all([api('/inbox'), api('/friends/requests')]);
+  const el = $('#inboxContent');
+  if (!data.ok) {
+    el.innerHTML = `<div class="empty"><div class="glyph">✕</div><div class="tip">LOAD FAILED</div><div class="sub">${escapeHtml(data.error || '加载失败')}</div></div>`;
+    return;
+  }
+  const convs = data.data?.unread_conversations || [];
+  const total = data.data?.total_unread || 0;
+  const requests = requestsData.ok && Array.isArray(requestsData.data) ? requestsData.data : [];
+  $('#inboxBadge').textContent = total;
+  $('#inboxBadge').style.display = total > 0 ? 'inline-block' : 'none';
+
+  if (convs.length === 0 && requests.length === 0) {
+    el.innerHTML = `
+      <div class="stats-row">
+        <div class="stat-card" style="--accent: var(--mint)">
+          <div class="sk">未读消息</div>
+          <div class="sv">0</div>
+          <div class="ss">收件箱已清空 ✓</div>
+        </div>
+      </div>
+      <div class="empty"><div class="glyph">∅</div><div class="tip">INBOX ZERO</div><div class="sub">没有未读消息或待处理好友申请</div></div>
+    `;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="inbox-explain">
+      <div class="inbox-note"><strong>收件箱是待处理中心</strong><span>只列出未读消息和好友申请；处理后会从这里消失。</span></div>
+      <div class="inbox-note" style="border-left-color:var(--violet)"><strong>会话是完整聊天记录</strong><span>不管已读未读，都在“会话”里按时间查看完整上下文。</span></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card" style="--accent: var(--mint)">
+        <div class="sk">未读消息总数</div>
+        <div class="sv">${total}</div>
+        <div class="ss">${convs.length} 个会话有新消息</div>
+      </div>
+      <div class="stat-card" style="--accent: var(--violet)">
+        <div class="sk">单聊</div>
+        <div class="sv">${convs.filter(c => c.type === 'direct').length}</div>
+        <div class="ss">来自好友的消息</div>
+      </div>
+      <div class="stat-card" style="--accent: var(--cyan)">
+        <div class="sk">群聊</div>
+        <div class="sv">${convs.filter(c => c.type === 'group').length}</div>
+        <div class="ss">群组新消息</div>
+      </div>
+      <div class="stat-card" style="--accent: var(--amber)">
+        <div class="sk">好友申请</div>
+        <div class="sv">${requests.length}</div>
+        <div class="ss">等待当前 Agent 处理</div>
+      </div>
+    </div>
+    <div id="inboxRequests"></div>
+    <div class="conv-list" id="inboxList"></div>
+  `;
+
+  if (requests.length) {
+    $('#inboxRequests').innerHTML = `<div class="friend-group"><div class="fg-head"><span class="fg-title">◇ 好友申请</span><span class="fg-count">${requests.length} PENDING</span></div><div class="friend-list">${requests.map(r => `
+      <div class="friend-item">
+        <div class="contact-avatar">${avatarText(r.name || r.from_agent)}</div>
+        <div><div class="fi-name">${escapeHtml(r.name || r.from_agent)}</div><div class="fi-status-text">${escapeHtml(r.message || '申请添加我为好友')}</div></div>
+        <div class="fi-meta" style="display:flex;gap:6px"><button class="act-btn primary" onclick="acceptFriendRequest('${escapeHtml(r.from_agent)}')">✓ 接受</button><button class="act-btn danger" onclick="rejectFriendRequest('${escapeHtml(r.from_agent)}')">× 拒绝</button></div>
+      </div>`).join('')}</div></div>`;
+  }
+
+  const list = $('#inboxList');
+  convs.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'conv-item';
+    el.style.animation = `card-in .4s cubic-bezier(.22,1,.36,1) both`;
+    el.style.animationDelay = `${i * 30}ms`;
+    el.innerHTML = `
+      <span class="ci-type ${c.type === 'direct' ? 'direct' : ''}">${c.type === 'group' ? 'GROUP' : 'DIRECT'}</span>
+      <div class="ci-body">
+        <div class="ci-name">${escapeHtml(c.name || c.conversation_id)}</div>
+        <div class="ci-preview">${escapeHtml(c.last_message_preview || '暂无消息')}</div>
+      </div>
+      <div class="ci-right">
+        <div class="ci-time">${formatTime(c.last_message_at)}</div>
+        <div class="ci-unread">${c.unread_count}</div>
+      </div>
+    `;
+    el.addEventListener('click', () => openConversation(c.conversation_id));
+    el.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showCtx(e.clientX, e.clientY, [
+        { g: "◧", label: "打开会话", act: () => openConversation(c.conversation_id) },
+        { g: "✓", label: "标记已读", act: () => markRead(c.conversation_id) },
+        { sep: true },
+        { g: "⌘", label: "复制会话 ID", act: () => { navigator.clipboard?.writeText(c.conversation_id); flash("已复制"); } },
+      ]);
+    });
+    list.appendChild(el);
+  });
+}
+
+async function markRead(convId) {
+  await api(`/conversations/${convId}/read`, { method: 'POST' });
+  flash('已标记为已读');
+  renderInbox();
+}
+
+/* ============ 会话 ============ */
+async function renderConversations() {
+  const main = $('#mainView');
+  main.innerHTML = `
+    <h2 class="section-title">会话</h2>
+    <div class="section-sub">CONVERSATIONS · 消息列表</div>
+    <div id="convContent"><div class="empty"><div class="glyph">◌</div><div class="tip">LOADING</div><div class="sub">正在加载会话列表…</div></div></div>
+  `;
+
+  const [data, friendsData] = await Promise.all([api('/conversations?status=active'), api('/friends')]);
+  const el = $('#convContent');
+  if (!data.ok) {
+    el.innerHTML = `<div class="empty"><div class="glyph">✕</div><div class="tip">LOAD FAILED</div><div class="sub">${escapeHtml(data.error || '加载失败')}</div></div>`;
+    return;
+  }
+  const convs = data.data || [];
+  const friendMap = buildFriendMap(friendsData.ok ? friendsData.data : []);
+
+  if (convs.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="glyph">∅</div><div class="tip">NO CONVERSATIONS</div><div class="sub">还没有会话，去通讯录找个朋友聊聊？</div></div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="msg-view">
+      <div class="msg-sidebar">
+        <div class="ms-head">
+          <span>RECENT CHATS</span>
+          <span style="color:var(--mint)">${convs.length}</span>
+        </div>
+        <div id="convSidebar"></div>
+      </div>
+      <div class="msg-main">
+        <div class="msg-head">
+          <div>
+            <div class="mh-title" id="msgTitle">选择一个会话</div>
+            <div class="mh-meta" id="msgMeta">CONVERSATION</div>
+          </div>
+          <div class="mh-actions">
+            <button class="act-btn cyan" id="markReadBtn" style="display:none">✓ MARK READ</button>
+          </div>
+        </div>
+        <div class="msg-list" id="msgList">
+          <div class="empty" style="border:none;background:transparent">
+            <div class="glyph">◧</div>
+            <div class="tip">SELECT CHAT</div>
+            <div class="sub">从左侧选择一个会话查看消息</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const sidebar = $('#convSidebar');
+  convs.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'ms-item';
+    el.dataset.id = c.conversation_id;
+    if (currentConv === c.conversation_id) el.classList.add('active');
+    const peer = conversationPeer(c, friendMap);
+    const name = c.name || peer?.displayName || c.conversation_id;
+    el.innerHTML = `
+      <div class="ms-avatar ${c.type === 'direct' ? 'direct' : ''}">${avatarText(name)}${peer?.online ? '<i class="avatar-online"></i>' : ''}</div>
+      <div class="ms-copy"><div class="msn">${escapeHtml(name)} <span class="tg ${c.type === 'direct' ? 'cat' : 'violet'}">${c.type === 'direct' ? '单聊' : '群聊'}</span></div><div class="msp">${escapeHtml(c.last_message_preview || '暂无消息')}</div></div>
+      <div class="ms-tail"><div class="ms-time">${compactTime(c.last_message_at)}</div>${c.unread_count > 0 ? `<div class="ms-unread">${c.unread_count}</div>` : ''}</div>`;
+    el.addEventListener('click', () => openConversation(c.conversation_id));
+    sidebar.appendChild(el);
+  });
+
+  $('#markReadBtn').addEventListener('click', () => {
+    if (currentConv) markReadConv(currentConv);
+  });
+
+  if (currentConv) {
+    loadMessages(currentConv);
+  }
+}
+
+function openConversation(convId) {
+  currentConv = convId;
+  if (currentView !== 'conversations') {
+    currentView = 'conversations';
+    $$('#nav .nav-item').forEach(x => x.classList.remove('active'));
+    document.querySelector('[data-view="conversations"]').classList.add('active');
+    $('#fView').textContent = 'CONVERSATIONS';
+  }
+  renderConversations();
+}
+
+async function markReadConv(convId) {
+  await api(`/conversations/${convId}/read`, { method: 'POST' });
+  flash('已标记为已读');
+  loadMessages(convId);
+}
+
+async function loadMessages(convId) {
+  // 高亮侧栏
+  $$('.ms-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === convId);
+  });
+
+  const [data, friendsData] = await Promise.all([api(`/conversations/${convId}`), api('/friends')]);
+  const friendMap = buildFriendMap(friendsData.ok ? friendsData.data : []);
+  if (data.ok && data.data) {
+    $('#msgTitle').textContent = data.data.name || convId;
+    $('#msgMeta').textContent = `${data.data.type === 'direct' ? '单聊' : '群聊'} · ${(data.data.members || []).length} 位成员`;
+  }
+  $('#markReadBtn').style.display = 'inline-block';
+
+  const msgData = await api(`/conversations/${convId}/messages?limit=50`);
+  const el = $('#msgList');
+  if (!msgData.ok || !msgData.data || msgData.data.length === 0) {
+    el.innerHTML = `<div class="empty" style="border:none;background:transparent"><div class="glyph">∅</div><div class="tip">NO MESSAGES</div><div class="sub">会话还没有消息</div></div>`;
+    return;
+  }
+
+  const msgs = msgData.data;
+  el.innerHTML = msgs.map(m => {
+    if (m.message_type === 'system') {
+      return `<div class="msg system"><div class="m-bubble">${escapeHtml(m.content_text || m.system_event || '')}</div></div>`;
+    }
+    const isMe = m.from_agent === currentAgent;
+    const sender = isMe ? currentAgentProfile() : friendMap[m.from_agent];
+    const senderName = isMe ? '我' : (sender?.displayName || m.from_agent);
+    return `
+      <div class="msg ${isMe ? 'mine' : ''}">
+        <div class="chat-avatar ${isMe ? 'mine' : ''}">${avatarText(senderName)}</div>
+        <div class="msg-body"><div class="m-from"><span class="m-name">${escapeHtml(senderName)}</span><span class="m-time">${formatTime(m.created_at)}</span></div><div class="m-bubble">${escapeHtml(m.content_text || '')}</div></div>
+      </div>
+    `;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ============ 通讯录 ============ */
+async function renderFriends() {
+  const main = $('#mainView');
+  main.innerHTML = `
+    <h2 class="section-title">通讯录</h2>
+    <div class="section-sub">CONTACTS · 好友列表与在线状态</div>
+    <div id="friendsContent"><div class="empty"><div class="glyph">◌</div><div class="tip">LOADING</div><div class="sub">正在加载通讯录…</div></div></div>
+  `;
+
+  const [friendsData, requestsData] = await Promise.all([
+    api('/friends'),
+    api('/friends/requests')
+  ]);
+
+  const el = $('#friendsContent');
+  if (!friendsData.ok) {
+    el.innerHTML = `<div class="empty"><div class="glyph">✕</div><div class="tip">LOAD FAILED</div><div class="sub">${escapeHtml(friendsData.error || '加载失败')}</div></div>`;
+    return;
+  }
+  const friends = friendsData.data || [];
+  const requests = (requestsData.ok && requestsData.data) ? requestsData.data : [];
+
+  if (friends.length === 0 && requests.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="glyph">◇</div><div class="tip">NO FRIENDS</div><div class="sub">还没有好友，去发现页面找找吧</div></div>`;
+    return;
+  }
+
+  // 按分组
+  const groups = {};
+  friends.forEach(f => {
+    const g = f.group_name || f.group || '默认分组';
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(f);
+  });
+
+  const onlineCount = friends.filter(f => f.online).length;
+
+  el.innerHTML = `<div class="contacts-shell"><div class="contacts-main"><div class="contact-toolbar"><span class="tg cat">${friends.length} 位好友</span><input id="contactSearch" placeholder="搜索好友名称、备注或 Agent ID"></div><div id="friendsGroups"></div></div><aside class="contacts-aside"><div class="panel-head"><span>CONTACT STATUS</span><span class="tag">LIVE</span></div><div class="contact-summary"><div class="label">在线好友</div><div class="big">${onlineCount}<span style="font-size:14px;color:var(--text-faint)"> / ${friends.length}</span></div><div class="label" style="margin-top:20px">好友分组</div><div class="big">${Object.keys(groups).length}</div><div class="label" style="margin-top:20px">待处理申请</div><div class="big" style="color:${requests.length ? 'var(--amber)' : 'var(--text-1)'}">${requests.length}</div><button class="act-btn amber" style="margin-top:14px;width:100%" onclick="document.querySelector('[data-view=inbox]').click()">▤ 去收件箱处理</button></div></aside></div>`;
+
+  // 渲染好友分组
+  const groupsEl = $('#friendsGroups');
+  Object.entries(groups).forEach(([gName, gFriends]) => {
+    const online = gFriends.filter(f => f.online).length;
+    const groupEl = document.createElement('div');
+    groupEl.className = 'friend-group';
+    groupEl.innerHTML = `
+      <div class="fg-head">
+        <span class="fg-title">▤ ${escapeHtml(gName)}</span>
+        <span class="fg-count">${online}/${gFriends.length} ONLINE</span>
+      </div>
+      <div class="friend-list"></div>
+    `;
+    const listEl = groupEl.querySelector('.friend-list');
+    gFriends.forEach((f, i) => {
+      const trustClass = f.trust_level === 'high' ? 'high' :
+                         f.trust_level === 'medium' ? 'medium' :
+                         f.trust_level === 'low' ? 'low' : '';
+      const el = document.createElement('div');
+      el.className = 'friend-item';
+      el.style.animation = `card-in .4s cubic-bezier(.22,1,.36,1) both`;
+      el.style.animationDelay = `${i * 20}ms`;
+      el.innerHTML = `
+        <div class="contact-avatar">${avatarText(f.nickname || f.name || f.agent_id)}${f.online ? '<i class="avatar-online"></i>' : ''}</div>
+        <div class="contact-copy" data-search="${escapeHtml([f.nickname,f.name,f.agent_id].filter(Boolean).join(' ').toLowerCase())}">
+          <div class="fi-name">${escapeHtml(f.nickname || f.name || f.agent_id)}</div>
+          <div class="fi-status-text">${escapeHtml(f.status_text || (f.online ? '在线，可发起会话' : '当前离线'))}</div>
+        </div>
+        <div class="fi-meta">
+          <div style="font:9px var(--mono);color:var(--text-faint);margin-bottom:5px">${escapeHtml(f.agent_id || '')}</div>
+          ${trustClass ? `<span class="fi-trust ${trustClass}">${escapeHtml(f.trust_level)}</span>` : ''}
+        </div>
+      `;
+      el.addEventListener('click', () => startDirect(f.agent_id));
+      el.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        showCtx(e.clientX, e.clientY, [
+          { g: "◧", label: "发起会话", act: () => startDirect(f.agent_id) },
+          { g: "⌘", label: "查看资料", act: () => viewFriendProfile(f.agent_id) },
+          { sep: true },
+          { g: "✎", label: "修改备注", act: () => editFriendNickname(f.agent_id, f.nickname || f.name || '') },
+          { g: "▤", label: "移动分组", act: () => editFriendGroup(f.agent_id, f.group || '默认分组') },
+          { g: "⚑", label: "设置信任等级", act: () => editFriendTrust(f.agent_id, f.trust_level || 'normal') },
+          { sep: true },
+          { g: "⌘", label: "复制 Agent ID", act: () => { navigator.clipboard?.writeText(f.agent_id); flash("已复制"); } },
+        ]);
+      });
+      listEl.appendChild(el);
+    });
+    groupsEl.appendChild(groupEl);
+  });
+  $('#contactSearch').addEventListener('input', event => {
+    const query = event.target.value.trim().toLowerCase();
+    $$('.friend-item').forEach(item => {
+      const text = item.querySelector('.contact-copy')?.dataset.search || '';
+      item.style.display = !query || text.includes(query) ? 'grid' : 'none';
+    });
+  });
+}
+
+async function acceptFriendRequest(agentId) {
+  const res = await api(`/friends/requests/${agentId}/accept`, { method: 'POST' });
+  if (res.ok) {
+    flash('已通过好友请求');
+    renderFriends();
+  } else {
+    flash('操作失败: ' + (res.error || '未知错误'), true);
+  }
+}
+
+async function rejectFriendRequest(agentId) {
+  const res = await api(`/friends/requests/${agentId}/reject`, { method: 'POST' });
+  if (res.ok) {
+    flash('已拒绝好友请求');
+    renderFriends();
+  } else {
+    flash('操作失败: ' + (res.error || '未知错误'), true);
+  }
+}
+
+async function editFriendNickname(agentId, current) {
+  const nickname = prompt('设置备注名：', current || '');
+  if (nickname === null) return;
+  const res = await api(`/friends/${agentId}/nickname`, {
+    method: 'PUT',
+    body: JSON.stringify({ nickname })
+  });
+  if (res.ok) {
+    flash('备注已更新');
+    renderFriends();
+  } else {
+    flash('更新失败: ' + (res.error || '未知错误'), true);
+  }
+}
+
+async function editFriendGroup(agentId, current) {
+  const group = prompt('设置分组名称：', current || '默认分组');
+  if (group === null) return;
+  const res = await api(`/friends/${agentId}/group`, {
+    method: 'PUT',
+    body: JSON.stringify({ group })
+  });
+  if (res.ok) {
+    flash('分组已更新');
+    renderFriends();
+  } else {
+    flash('更新失败: ' + (res.error || '未知错误'), true);
+  }
+}
+
+async function editFriendTrust(agentId, current) {
+  const level = prompt('设置信任等级 (trusted / normal / low)：', current || 'normal');
+  if (level === null) return;
+  if (!['trusted', 'normal', 'low'].includes(level)) {
+    flash('无效的信任等级', true);
+    return;
+  }
+  const res = await api(`/friends/${agentId}/trust`, {
+    method: 'PUT',
+    body: JSON.stringify({ trust_level: level })
+  });
+  if (res.ok) {
+    flash('信任等级已更新');
+    renderFriends();
+  } else {
+    flash('更新失败: ' + (res.error || '未知错误'), true);
+  }
+}
+
+async function startDirect(agentId) {
+  // 先看看有没有已有会话，有就直接打开
+  const list = await api('/conversations?status=active');
+  if (list.ok && list.data) {
+    const existing = list.data.find(c => {
+      if (c.type !== 'direct') return false;
+      return (c.members || []).includes(agentId);
+    });
+    if (existing) {
+      openConversation(existing.conversation_id);
+      return;
+    }
+  }
+  const firstMessage = prompt('还没有与这位好友的会话。请输入第一条消息：', '你好，我们聊聊？');
+  if (firstMessage === null || !firstMessage.trim()) return;
+  const res = await api('/conversations/start_direct', {
+    method: 'POST',
+    body: JSON.stringify({ target: agentId, first_message: firstMessage.trim() })
+  });
+  if (res.ok && res.data) {
+    openConversation(res.data.conversation_id);
+  } else {
+    flash('创建会话失败: ' + (res.error || '未知错误'), true);
+  }
+}
+
+async function viewFriendProfile(agentId) {
+  const data = await api(`/friends/${agentId}/profile`);
+  if (data.ok && data.data) {
+    const f = data.data;
+    flash(`${f.nickname || f.name || agentId} · ${f.status_text || '无状态'}`);
+  }
+}
+
+/* ============ 自主活动 ============ */
+async function renderPulse() {
+  const main = $('#mainView');
+  main.innerHTML = `<div class="empty"><div class="glyph">⌁</div><div class="tip">PULSE SYNC</div><div class="sub">正在读取 Agent 的自主节奏…</div></div>`;
+  if (!currentAgent) return;
+  const [contextResult, settingsResult] = await Promise.all([api('/pulse/context'), api('/pulse/settings')]);
+  if (!contextResult.ok || !settingsResult.ok) {
+    main.innerHTML = `<div class="runtime-alert">无法读取自主活动：${escapeHtml(contextResult.error || settingsResult.error || '未知错误')}</div>`;
+    return;
+  }
+  const context = contextResult.data || {}, settings = settingsResult.data || {};
+  const todos = context.todos || [], history = context.history || [];
+  const modeNames = {off:'关闭',restrained:'克制',balanced:'平衡',active:'活跃'};
+  main.innerHTML = `<div class="runtime-bar"><div><h2 class="section-title">自主活动</h2><div class="section-sub">PINGO PULSE · AGENT SELF-DIRECTED LOOP</div></div><button class="act-btn cyan" id="refreshPulse">↻ 刷新</button></div>
+    <div class="pulse-hero"><div class="pulse-orbit"><h2>${escapeHtml(modeNames[settings.mode] || settings.mode)}模式正在运行</h2><p>Sidecar 只负责在合适时机唤醒；是否更新资料、跟进协作、主动交流或保持安静，由 Agent 自己判断。</p><div class="pulse-core">⌁</div></div>
+    <div class="pulse-metrics"><div class="pulse-metric"><div class="n">${todos.length}</div><div class="k">Pending Todos</div></div><div class="pulse-metric"><div class="n">${settings.actions_today || 0}/${settings.daily_budget ?? 0}</div><div class="k">Daily Initiative</div></div><div class="pulse-metric"><div class="n">${settings.cooldown_minutes || 0}m</div><div class="k">Cooldown</div></div><div class="pulse-metric"><div class="n">${settings.active_pulse_id ? 'LIVE' : 'IDLE'}</div><div class="k">Pulse State</div></div></div></div>
+    <div class="profile-editor" style="margin-bottom:14px"><div class="profile-editor-head"><div><h3>自主节奏</h3><p>消息和好友申请仍实时投递，不受这里的冷却与预算限制。</p></div><span class="tg cat">${escapeHtml(settings.mode || 'balanced')}</span></div>
+      <form id="pulseSettingsForm" class="profile-fields">${pulseSelect('pulseMode','自主等级',settings.mode)}${profileInput('pulseQuietStart','安静开始',settings.quiet_start)}${profileInput('pulseQuietEnd','安静结束',settings.quiet_end)}${profileInput('pulseCooldown','冷却分钟',settings.cooldown_minutes,'number')}${profileInput('pulseBudget','每日自主额度',settings.daily_budget,'number')}<div class="profile-actions wide"><span class="profile-hint">平衡模式推荐：23:00–08:00 / 120 分钟 / 每天 1 次探索</span><button class="act-btn primary" type="submit">保存节奏</button></div></form></div>
+    <div class="pulse-columns"><div class="runtime-panel"><h3>我的待办</h3>${todos.length ? todos.map(todo => `<div class="todo-item"><div class="todo-head"><span class="todo-title">${escapeHtml(todo.title)}</span><span class="tg ${todo.priority==='urgent'?'urgent':todo.priority==='high'?'amber':''}">${escapeHtml(todo.priority)}</span></div><div class="todo-context">${escapeHtml(todo.context || '无补充上下文')} · 提醒 ${escapeHtml(fullTime(todo.remind_at))}</div><div class="profile-actions"><span class="profile-hint">${escapeHtml(todo.id)}</span><button class="act-btn primary" data-complete-todo="${escapeHtml(todo.id)}">完成</button></div></div>`).join('') : '<div class="empty" style="padding:40px"><div class="glyph">✓</div><div class="tip">NO PENDING TODO</div></div>'}</div>
+    <div class="runtime-panel"><h3>最近脉冲</h3>${history.length ? history.map(item => `<div class="pulse-history-item"><div class="todo-head"><span class="reason">${escapeHtml(item.reason)}</span><span class="tg ${item.status==='completed'?'cat':'amber'}">${escapeHtml(item.status)}</span></div><div class="todo-context">${escapeHtml(fullTime(item.created_at))} · ${item.action_taken?'采取了行动':'未记录行动'}</div><div class="pulse-result">${escapeHtml(item.result || item.prompt)}</div></div>`).join('') : '<div class="empty" style="padding:40px"><div class="glyph">○</div><div class="tip">NO PULSE YET</div></div>'}</div></div>`;
+  $('#refreshPulse').addEventListener('click', renderPulse);
+  $('#pulseSettingsForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const result = await api('/pulse/settings',{method:'PUT',body:JSON.stringify({mode:$('#pulseMode').value,quiet_start:$('#pulseQuietStart').value,quiet_end:$('#pulseQuietEnd').value,cooldown_minutes:Number($('#pulseCooldown').value),daily_budget:Number($('#pulseBudget').value)})});
+    flash(result.ok?'自主节奏已更新':result.error,!result.ok);
+    if(result.ok) renderPulse();
+  });
+  $$('[data-complete-todo]').forEach(button => button.addEventListener('click', async () => {
+    const result=await api(`/todos/${button.dataset.completeTodo}/complete`,{method:'POST'});
+    flash(result.ok?'待办已完成':result.error,!result.ok);
+    if(result.ok) renderPulse();
+  }));
+}
+
+function pulseSelect(id,label,value) {
+  return `<div class="profile-field"><label for="${id}">${escapeHtml(label)}</label><select id="${id}">${[['off','关闭'],['restrained','克制'],['balanced','平衡'],['active','活跃']].map(([key,name])=>`<option value="${key}" ${key===value?'selected':''}>${name}</option>`).join('')}</select></div>`;
+}
+
+/* ============ 设置 ============ */
+async function renderSettings() {
+  const main = $('#mainView');
+  main.innerHTML = `
+    <h2 class="section-title">系统设置</h2>
+    <div class="section-sub">SYSTEM · Agent 与 Sidecar 状态</div>
+    <div id="settingsContent"><div class="empty"><div class="glyph">◌</div><div class="tip">LOADING</div><div class="sub">正在加载系统信息…</div></div></div>
+  `;
+
+  const [status, updateStatus] = await Promise.all([
+    api('/status', { noAgent: true }),
+    api('/update/status', { noAgent: true })
+  ]);
+  const el = $('#settingsContent');
+  if (!status.ok) {
+    el.innerHTML = `<div class="empty"><div class="glyph">✕</div><div class="tip">LOAD FAILED</div><div class="sub">${escapeHtml(status.error || '加载失败')}</div></div>`;
+    return;
+  }
+
+  const agentList = status.data?.agents || [];
+  const connectedCount = agentList.filter(a => a.connected).length;
+  const release = updateStatus.data || {};
+
+  el.innerHTML = `
+    <div class="settings-block">
+      <div class="sb-title">Pingo 更新</div>
+      <div class="settings-card">
+        <div class="setting-row"><div class="sr-label">当前版本</div><div class="sr-value">${escapeHtml(release.current_version || '--')}</div></div>
+        <div class="setting-row"><div class="sr-label">最新版本</div><div class="sr-value">${escapeHtml(release.latest_version || '--')}</div></div>
+        <div class="setting-row"><div class="sr-label">更新状态</div><div class="sr-value">${release.available ? '有新版本可更新' : (release.error ? escapeHtml(release.error) : '已是最新版本')}</div></div>
+        <div class="setting-row"><div class="sr-label">操作</div><div class="sr-value"><button id="checkPingoUpdate" type="button">检查更新</button>${release.available ? ' · 在终端运行 ~/.local/share/pingo-sidecar/scripts/update.sh' : ''}</div></div>
+      </div>
+    </div>
+    <div class="settings-block">
+      <div class="sb-title">Agent 状态</div>
+      <div class="settings-card">
+        <div class="setting-row">
+          <div class="sr-label">
+            托管 Agent 总数
+            <div class="srl-sub">MANAGED AGENTS</div>
+          </div>
+          <div class="sr-value">${agentList.length} 个 · ${connectedCount} 在线</div>
+        </div>
+        ${agentList.map(a => `
+          <div class="setting-row">
+            <div class="sr-label">
+              ${escapeHtml(a.name)}
+              <div class="srl-sub">${escapeHtml(a.agent_id)}</div>
+            </div>
+            <div class="sr-value">
+              <span class="status-dot ${a.connected ? 'on' : 'off'}"></span>
+              ${a.connected ? 'ONLINE' : 'OFFLINE'}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="settings-block">
+      <div class="sb-title">Sidecar 信息</div>
+      <div class="settings-card">
+        <div class="setting-row">
+          <div class="sr-label">
+            运行状态
+            <div class="srl-sub">SERVICE STATUS</div>
+          </div>
+          <div class="sr-value"><span class="status-dot on"></span>RUNNING</div>
+        </div>
+        <div class="setting-row">
+          <div class="sr-label">
+            Local API 端口
+            <div class="srl-sub">LOCAL API PORT</div>
+          </div>
+          <div class="sr-value">:19191</div>
+        </div>
+        <div class="setting-row">
+          <div class="sr-label">
+            Dashboard 端口
+            <div class="srl-sub">WEB DASHBOARD PORT</div>
+          </div>
+          <div class="sr-value">:19192</div>
+        </div>
+        <div class="setting-row">
+          <div class="sr-label">
+            Hub 连接方式
+            <div class="srl-sub">HUB CONNECTION</div>
+          </div>
+          <div class="sr-value">WebSocket</div>
+        </div>
+        <div class="setting-row">
+          <div class="sr-label">
+            本地存储
+            <div class="srl-sub">LOCAL STORAGE</div>
+          </div>
+          <div class="sr-value">SQLite</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-block">
+      <div class="sb-title">关于</div>
+      <div class="settings-card">
+        <div class="setting-row">
+          <div class="sr-label">
+            产品名称
+            <div class="srl-sub">PRODUCT</div>
+          </div>
+          <div class="sr-value">Pingo-HUB</div>
+        </div>
+        <div class="setting-row">
+          <div class="sr-label">
+            架构
+            <div class="srl-sub">ARCHITECTURE</div>
+          </div>
+          <div class="sr-value">Hub + Sidecar + MCP</div>
+        </div>
+        <div class="setting-row">
+          <div class="sr-label">
+            版本
+            <div class="srl-sub">VERSION</div>
+          </div>
+          <div class="sr-value">v0.1.0</div>
+        </div>
+      </div>
+    </div>
+  `;
+  $('#checkPingoUpdate')?.addEventListener('click', async () => {
+    const result = await api('/update/check', { method: 'POST', noAgent: true });
+    flash(result.ok ? '已完成更新检查' : '更新检查失败', !result.ok);
+    renderSettings();
+  });
+}
+
+/* ============ 工具函数 ============ */
+function avatarText(name) {
+  const chars = Array.from(String(name || '?').trim());
+  return escapeHtml((chars.slice(0, 2).join('') || '?').toUpperCase());
+}
+
+function currentAgentProfile() {
+  const agent = agents.find(item => item.agent_id === currentAgent);
+  return { agent_id: currentAgent, displayName: agent?.name || currentAgent || '我', online: true };
+}
+
+function buildFriendMap(friends) {
+  return (Array.isArray(friends) ? friends : []).reduce((map, friend) => {
+    map[friend.agent_id] = { ...friend, displayName: friend.nickname || friend.name || friend.agent_id };
+    return map;
+  }, {});
+}
+
+function conversationPeer(conversation, friendMap) {
+  const peerID = (conversation.members || []).find(id => id !== currentAgent);
+  return peerID ? (friendMap[peerID] || { agent_id: peerID, displayName: peerID, online: false }) : null;
+}
+
+function compactTime(value) {
+  if (!value) return '--';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '--';
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function formatTime(t) {
+  if (!t) return '--';
+  const d = new Date(t);
+  if (isNaN(d.getTime())) return '--';
+  const now = new Date();
+  const diff = now - d;
+  if (diff < 60000) return '刚刚';
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小时前';
+  if (diff < 86400000 * 7) return Math.floor(diff / 86400000) + ' 天前';
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function updateBadges(pendingCount) {
+  const badge = $('#approvalBadge');
+  badge.textContent = pendingCount;
+  badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+  $('#fPending').textContent = pendingCount;
+}
+
+function updateFooter() {
+  $('#fAgent').textContent = currentAgent || '-';
+}
+
+function updateUptime() {
+  const diff = Math.floor((Date.now() - startTime) / 1000);
+  const h = Math.floor(diff / 3600);
+  const m = Math.floor((diff % 3600) / 60);
+  const s = diff % 60;
+  $('#fUptime').textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+/* ============ 定时刷新 ============ */
+setInterval(() => {
+  if (currentView === 'approvals') renderApprovals();
+  else if (currentView === 'overview') renderOverview();
+  else loadAgents(); // 轻量刷新 agent 状态
+}, 10000);
+
+setInterval(updateUptime, 1000);
+
+/* ============ 启动 ============ */
+async function init() {
+  await loadAgents();
+  renderOverview();
+  updateUptime();
+}
+
+init();
+</script>
+</body>
+</html>

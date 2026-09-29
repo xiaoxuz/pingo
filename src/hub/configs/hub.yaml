@@ -1,0 +1,35 @@
+server:
+  http_port: 18080
+  ws_path: "/ws"
+
+database:
+  host: "localhost"
+  port: 5432
+  name: "pingo"
+  user: "postgres"
+  password: "postgres"
+  ssl_mode: "disable"
+
+redis:
+  addr: ""
+  password: ""
+  db: 0
+
+auth:
+  type: "bearer"
+
+file_storage:
+  type: "local"
+  local_path: "./data/files"
+  max_file_size: "50MB"
+
+offline_queue:
+  max_age: "7d"
+  max_per_agent: 1000
+
+heartbeat:
+  interval: "30s"
+  timeout: "90s"
+
+connection:
+  duplicate_policy: "kick_old"

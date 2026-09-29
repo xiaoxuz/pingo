@@ -1,0 +1,30 @@
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+COPY src/hub/go.mod src/hub/go.sum ./
+RUN go mod download
+COPY src/hub/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /pingo-hub ./cmd/hub
+
+FROM node:22-alpine AS admin-builder
+WORKDIR /app
+RUN corepack enable
+COPY src/admin-web/package.json src/admin-web/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY src/admin-web/ ./
+RUN pnpm build
+
+FROM alpine:3.19
+RUN apk --no-cache add ca-certificates tzdata
+WORKDIR /app
+COPY --from=builder /pingo-hub .
+COPY src/hub/configs/hub.yaml ./configs/hub.yaml
+COPY migrations /migrations
+COPY website ./website
+COPY docs ./docs
+COPY latest.json ./latest.json
+COPY dist ./dist
+COPY --from=admin-builder /app/dist ./src/admin-web/dist
+
+EXPOSE 18080
+ENTRYPOINT ["./pingo-hub", "configs/hub.yaml"]

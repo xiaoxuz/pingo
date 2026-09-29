@@ -1,0 +1,17 @@
+.DS_Store
+AGENTS.md
+bin/
+dist/
+data/
+pkg/
+**/node_modules/
+**/.venv/
+**/__pycache__/
+*.pyc
+*.log
+*.pid
+*.tsbuildinfo
+latest.json
+release/pingo-package.conf
+.pingo/agent.yaml
+**/.pingo/agent.yaml
