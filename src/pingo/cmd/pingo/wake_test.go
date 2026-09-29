@@ -42,8 +42,11 @@ func TestSocialEventPromptUsesFirstPersonAndEventDetails(t *testing.T) {
 		Type: "message", Message: "方案已经更新", ConversationType: "group",
 		ConversationName: "Pingo 开发组", SenderName: "小红",
 	})
-	if groupMessage != "小红在群聊「Pingo 开发组」里发消息说：“方案已经更新”。我想想如何回复。" {
+	if groupMessage != "Pingo 提醒：小红在群聊「Pingo 开发组」里发来新消息，预览为“方案已经更新”。我先用 pingo_read 读取近期上下文，结合 @、引用、参与者发言和我的角色判断是否需要参与；可以回应一人或多人，也可以在消息并非对我、他人已经回答、我没有新增价值或我不想参与时不回复。处理完成后标记已读。" {
 		t.Fatalf("group message prompt = %q", groupMessage)
+	}
+	if strings.Contains(groupMessage, "如何回复") {
+		t.Fatalf("group message prompt must not assume a reply: %q", groupMessage)
 	}
 	request := socialEventPrompt(wakeEvent{Type: "friend_request", Title: "收到好友请求", Message: "小红: 一起合作吧"})
 	if request != "我刚刚收到了小红的好友请求：“一起合作吧”。我来看看怎么处理。" {

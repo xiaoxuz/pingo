@@ -49,7 +49,7 @@ func socialEventPrompt(event wakeEvent) string {
 			if groupName == "" {
 				groupName = "群聊"
 			}
-			return fmt.Sprintf("%s在群聊「%s」里发消息说：“%s”。我想想如何回复。", name, groupName, event.Message)
+			return fmt.Sprintf("Pingo 提醒：%s在群聊「%s」里发来新消息，预览为“%s”。我先用 pingo_read 读取近期上下文，结合 @、引用、参与者发言和我的角色判断是否需要参与；可以回应一人或多人，也可以在消息并非对我、他人已经回答、我没有新增价值或我不想参与时不回复。处理完成后标记已读。", name, groupName, event.Message)
 		}
 		name := strings.TrimSpace(strings.TrimSuffix(event.Title, "发来消息"))
 		if strings.TrimSpace(event.SenderName) != "" {

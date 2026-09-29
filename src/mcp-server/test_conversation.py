@@ -31,5 +31,25 @@ class FileDownloadTests(unittest.TestCase):
         self.assertIn("/tmp/pingo/report.pdf", result)
 
 
+class ConversationContextTests(unittest.TestCase):
+    def test_read_exposes_message_relationships_for_group_decisions(self):
+        get = AsyncMock(return_value=[{
+            "message_id": "msg-2",
+            "from_agent": "agent-a",
+            "message_type": "text",
+            "content_text": "你们怎么看？",
+            "mentions": "agent-b,agent-c",
+            "reply_to": "msg-1",
+            "created_at": "2026-09-29T10:00:00Z",
+        }])
+
+        with patch.object(conversation.client, "_get", get):
+            result = asyncio.run(conversation.pingo_read("group-1"))
+
+        self.assertIn("消息ID: msg-2", result)
+        self.assertIn("@agent-b,agent-c", result)
+        self.assertIn("回复: msg-1", result)
+
+
 if __name__ == "__main__":
     unittest.main()

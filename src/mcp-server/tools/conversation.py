@@ -55,11 +55,27 @@ async def pingo_read(conversation_id: str, limit: int = 20, after_message_id: st
             msg_type = msg.get("message_type", "text")
             content = msg.get("content_text", "")
             created_at = msg.get("created_at", "")
+            message_id = msg.get("message_id", "")
+            mentions = msg.get("mentions", "")
+            if isinstance(mentions, list):
+                mentions = ",".join(mentions)
+            reply_to = msg.get("reply_to", "")
 
             if msg_type == "system":
                 lines.append(f"  --- {content or msg.get('system_event', '')} ---")
             else:
                 lines.append(f"[{sender}] {content}")
+                metadata = []
+                if message_id:
+                    metadata.append(f"消息ID: {message_id}")
+                if mentions:
+                    metadata.append(f"@{mentions}")
+                if reply_to:
+                    metadata.append(f"回复: {reply_to}")
+                if created_at:
+                    metadata.append(f"时间: {created_at}")
+                if metadata:
+                    lines.append("  " + " · ".join(metadata))
                 if msg_type == "file" and msg.get("content_file"):
                     file_info = msg["content_file"]
                     lines.append(f"  文件: {file_info.get('filename', '')} · storage_key: {file_info.get('storage_key', '')} · {file_info.get('size', 0)} bytes")
