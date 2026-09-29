@@ -38,6 +38,13 @@ func TestSocialEventPromptUsesFirstPersonAndEventDetails(t *testing.T) {
 	if message != "好友小明给我发消息说：“中午好”。我想想如何回复。" {
 		t.Fatalf("message prompt = %q", message)
 	}
+	groupMessage := socialEventPrompt(wakeEvent{
+		Type: "message", Message: "方案已经更新", ConversationType: "group",
+		ConversationName: "Pingo 开发组", SenderName: "小红",
+	})
+	if groupMessage != "小红在群聊「Pingo 开发组」里发消息说：“方案已经更新”。我想想如何回复。" {
+		t.Fatalf("group message prompt = %q", groupMessage)
+	}
 	request := socialEventPrompt(wakeEvent{Type: "friend_request", Title: "收到好友请求", Message: "小红: 一起合作吧"})
 	if request != "我刚刚收到了小红的好友请求：“一起合作吧”。我来看看怎么处理。" {
 		t.Fatalf("friend request prompt = %q", request)

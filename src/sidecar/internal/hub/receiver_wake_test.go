@@ -59,3 +59,37 @@ func TestMessageWakePreviewAllowsOneThousandUnicodeCharacters(t *testing.T) {
 		})
 	}
 }
+
+func TestGroupMessageWakeIncludesConversationContext(t *testing.T) {
+	storage, err := store.NewSQLiteStore(t.TempDir() + "/pingo.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer storage.Close()
+	if err := storage.UpsertConversation("recipient", store.ConversationRecord{
+		ConversationID: "group-1", Type: "group", Name: "Pingo 开发组", Status: "active",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	registry := session.NewRegistry()
+	registry.Register(session.RegisterRequest{ID: "recipient", AgentID: "recipient", Provider: "claude"})
+	receiver := NewMessageReceiver(storage, notify.NewManager(), nil, registry, nil)
+	receiver.HandleMessage("recipient", MessageEnvelope{
+		Type: "msg.new.notify",
+		Data: map[string]any{
+			"conversation_id": "group-1",
+			"message": map[string]any{
+				"message_id": "msg-1", "conversation_id": "group-1", "from_agent": "sender",
+				"message_type": "text", "content_text": "方案已经更新", "created_at": "now",
+			},
+		},
+	})
+	select {
+	case event := <-registry.Subscribe("recipient"):
+		if event.ConversationType != "group" || event.ConversationName != "Pingo 开发组" || event.SenderName != "sender" {
+			t.Fatalf("group message event = %+v", event)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected group message event")
+	}
+}

@@ -126,6 +126,12 @@ func (r *MessageReceiver) handleMsgNew(agentID string, agentName string, env Mes
 	}
 
 	preview := messagePreview(data.Message.ContentText)
+	conversationType := ""
+	conversationName := ""
+	if conversation, err := r.store.GetConversation(agentID, data.ConversationID); err == nil && conversation != nil {
+		conversationType = conversation.Type
+		conversationName = conversation.Name
+	}
 
 	r.notifier.Notify(notif.Notification{
 		AgentID:   agentID,
@@ -144,10 +150,13 @@ func (r *MessageReceiver) handleMsgNew(agentID string, agentName string, env Mes
 		return
 	}
 	result := r.sessions.Publish(agentID, session.Event{
-		Type:        "message",
-		UnreadCount: unreadCount,
-		Title:       fromName + " 发来消息",
-		Message:     preview,
+		Type:             "message",
+		UnreadCount:      unreadCount,
+		Title:            fromName + " 发来消息",
+		Message:          preview,
+		ConversationType: conversationType,
+		ConversationName: conversationName,
+		SenderName:       fromName,
 	})
 	operationlog.New(log.Writer()).Event("session", "deliver_event", "agent_id", agentID,
 		"event_type", "message", "session_id", result.SessionID, "result", result.Status, "unread_count", unreadCount)

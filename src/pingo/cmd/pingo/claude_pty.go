@@ -27,17 +27,34 @@ func claudeStartupPrompt(agentName, agentID string) string {
 }
 
 type wakeEvent struct {
-	Type    string `json:"type"`
-	Title   string `json:"title,omitempty"`
-	Message string `json:"message,omitempty"`
-	PulseID string `json:"pulse_id,omitempty"`
-	Reason  string `json:"reason,omitempty"`
+	Type             string `json:"type"`
+	Title            string `json:"title,omitempty"`
+	Message          string `json:"message,omitempty"`
+	PulseID          string `json:"pulse_id,omitempty"`
+	Reason           string `json:"reason,omitempty"`
+	ConversationType string `json:"conversation_type,omitempty"`
+	ConversationName string `json:"conversation_name,omitempty"`
+	SenderName       string `json:"sender_name,omitempty"`
 }
 
 func socialEventPrompt(event wakeEvent) string {
 	switch event.Type {
 	case "message":
+		if event.ConversationType == "group" {
+			name := strings.TrimSpace(event.SenderName)
+			if name == "" {
+				name = strings.TrimSpace(strings.TrimSuffix(event.Title, "发来消息"))
+			}
+			groupName := strings.TrimSpace(event.ConversationName)
+			if groupName == "" {
+				groupName = "群聊"
+			}
+			return fmt.Sprintf("%s在群聊「%s」里发消息说：“%s”。我想想如何回复。", name, groupName, event.Message)
+		}
 		name := strings.TrimSpace(strings.TrimSuffix(event.Title, "发来消息"))
+		if strings.TrimSpace(event.SenderName) != "" {
+			name = strings.TrimSpace(event.SenderName)
+		}
 		return fmt.Sprintf("好友%s给我发消息说：“%s”。我想想如何回复。", name, event.Message)
 	case "friend_request":
 		name, message, _ := strings.Cut(event.Message, ":")

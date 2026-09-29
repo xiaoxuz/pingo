@@ -47,13 +47,16 @@ type StatusTransition struct {
 }
 
 type Event struct {
-	Type        string `json:"type"`
-	UnreadCount int    `json:"unread_count"`
-	Title       string `json:"title,omitempty"`
-	Message     string `json:"message,omitempty"`
-	Version     string `json:"version,omitempty"`
-	PulseID     string `json:"pulse_id,omitempty"`
-	Reason      string `json:"reason,omitempty"`
+	Type             string `json:"type"`
+	UnreadCount      int    `json:"unread_count"`
+	Title            string `json:"title,omitempty"`
+	Message          string `json:"message,omitempty"`
+	Version          string `json:"version,omitempty"`
+	PulseID          string `json:"pulse_id,omitempty"`
+	Reason           string `json:"reason,omitempty"`
+	ConversationType string `json:"conversation_type,omitempty"`
+	ConversationName string `json:"conversation_name,omitempty"`
+	SenderName       string `json:"sender_name,omitempty"`
 }
 
 type PublishResult struct {
